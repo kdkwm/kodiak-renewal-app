@@ -31,6 +31,12 @@ export function PaymentMethodStep({
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="mb-6">
+            <Button size="lg" variant="outline" onClick={onPrev} className="bg-white">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </div>
           <BamboraPayment
             contractData={contractData}
             renewalState={renewalState}
@@ -47,9 +53,39 @@ export function PaymentMethodStep({
     const companyEmail = contractData.company === "KSB" ? "info@kodiaksnow.ca" : "info@kodiaksnowremoval.ca"
     const isInstallments = (renewalState?.selectedPayments || 1) > 1
 
+    const getPaymentDates = () => {
+      const dates = []
+      const today = new Date()
+
+      for (let i = 0; i < (renewalState?.selectedPayments || 1); i++) {
+        if (i === 0) {
+          dates.push("Today")
+        } else {
+          const futureDate = new Date(today)
+          futureDate.setMonth(today.getMonth() + i)
+          dates.push(
+            futureDate.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }),
+          )
+        }
+      }
+      return dates
+    }
+
+    const paymentDates = getPaymentDates()
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="mb-6">
+            <Button size="lg" variant="outline" onClick={onPrev} className="bg-white">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </div>
           <Card className="max-w-2xl mx-auto">
             <CardHeader className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
@@ -109,7 +145,7 @@ export function PaymentMethodStep({
 
                 {isInstallments && (
                   <div className="border-t pt-6">
-                    <h3 className="font-semibold text-lg mb-4">If You're Paying in Installments</h3>
+                    <h3 className="font-semibold text-lg mb-4">How to make your installment payments</h3>
                     <p className="text-sm italic mb-4">(Follow the One-Time Payment steps above for each payment.)</p>
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
@@ -132,15 +168,20 @@ export function PaymentMethodStep({
                         </div>
                         <p className="text-sm">Payment Schedule:</p>
                       </div>
-                      <div className="ml-9 space-y-1 text-sm">
-                        {Array.from({ length: renewalState?.selectedPayments || 1 }, (_, i) => (
-                          <div key={i} className="flex justify-between">
-                            <span>• {i === 0 ? "1st" : i === 1 ? "2nd" : i === 2 ? "3rd" : `${i + 1}th`} Payment:</span>
-                            <span>
-                              ${paymentAmount.toFixed(2)} – {i === 0 ? "[Today]" : "[Date]"}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="ml-9 bg-slate-50 border border-slate-200 rounded-lg p-4">
+                        <div className="space-y-2">
+                          {paymentDates.map((date, i) => (
+                            <div key={i} className="flex justify-between items-center py-1">
+                              <span className="font-medium text-slate-700">
+                                {i === 0 ? "1st" : i === 1 ? "2nd" : i === 2 ? "3rd" : `${i + 1}th`} Payment:
+                              </span>
+                              <div className="text-right">
+                                <div className="font-semibold text-green-600">${paymentAmount.toFixed(2)}</div>
+                                <div className="text-xs text-slate-500">{date}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
@@ -165,10 +206,6 @@ export function PaymentMethodStep({
                     Remind me about future payments
                   </Button>
                 )}
-                <Button size="lg" variant="outline" onClick={onPrev} className="w-full bg-transparent">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
               </div>
             </CardContent>
           </Card>

@@ -328,59 +328,63 @@ export default function ContractRenewal() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">Kodiak Snow Removal</h1>
-          <p className="text-slate-600">Winter 2025/2026 Season Renewal</p>
+        {renewalState.currentStep !== steps.length && (
+          <>
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-slate-800 mb-2">Kodiak Snow Removal</h1>
+              <p className="text-slate-600">Winter 2025/2026 Season Renewal</p>
 
-          {/* Service Address */}
-          <div className="mt-4 p-4 bg-blue-100 rounded-lg border border-blue-200 max-w-2xl mx-auto">
-            <div className="flex items-center justify-center gap-2 text-blue-800">
-              <Home className="w-5 h-5" />
-              <span className="font-medium">Renewing service for:</span>
-            </div>
-            <p className="text-blue-700 font-semibold mt-1">{contractData.serviceAddress}</p>
-            {contractData.isPlatinum && (
-              <div className="mt-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  Current Platinum Customer
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center mb-6 px-4">
-            {steps.map((step, index) => {
-              const isActive = renewalState.currentStep === step.id
-              const isCompleted = renewalState.currentStep > step.id
-
-              return (
-                <div key={step.id} className="flex items-center">
-                  <div
-                    className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 transition-all cursor-pointer font-semibold text-sm sm:text-base ${
-                      isCompleted
-                        ? "bg-green-500 border-green-500 text-white"
-                        : isActive
-                          ? "bg-blue-500 border-blue-500 text-white"
-                          : "bg-white border-slate-300 text-slate-400"
-                    }`}
-                    onClick={() => isCompleted && goToStep(step.id)}
-                  >
-                    {step.id}
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div
-                      className={`w-8 sm:w-14 h-0.5 mx-1 sm:mx-2 ${isCompleted ? "bg-green-500" : "bg-slate-300"}`}
-                    />
-                  )}
+              {/* Service Address */}
+              <div className="mt-4 p-4 bg-blue-100 rounded-lg border border-blue-200 max-w-2xl mx-auto">
+                <div className="flex items-center justify-center gap-2 text-blue-800">
+                  <Home className="w-5 h-5" />
+                  <span className="font-medium">Renewing service for:</span>
                 </div>
-              )
-            })}
-          </div>
-        </div>
+                <p className="text-blue-700 font-semibold mt-1">{contractData.serviceAddress}</p>
+                {contractData.isPlatinum && (
+                  <div className="mt-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Current Platinum Customer
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Progress Steps */}
+            <div className="mb-8">
+              <div className="flex items-center justify-center mb-6 px-4">
+                {steps.map((step, index) => {
+                  const isActive = renewalState.currentStep === step.id
+                  const isCompleted = renewalState.currentStep > step.id
+
+                  return (
+                    <div key={step.id} className="flex items-center">
+                      <div
+                        className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 transition-all cursor-pointer font-semibold text-sm sm:text-base ${
+                          isCompleted
+                            ? "bg-green-500 border-green-500 text-white"
+                            : isActive
+                              ? "bg-blue-500 border-blue-500 text-white"
+                              : "bg-white border-slate-300 text-slate-400"
+                        }`}
+                        onClick={() => isCompleted && goToStep(step.id)}
+                      >
+                        {step.id}
+                      </div>
+                      {index < steps.length - 1 && (
+                        <div
+                          className={`w-8 sm:w-14 h-0.5 mx-1 sm:mx-2 ${isCompleted ? "bg-green-500" : "bg-slate-300"}`}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Current Step Content */}
         {renderCurrentStep()}

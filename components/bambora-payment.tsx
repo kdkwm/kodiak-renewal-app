@@ -446,7 +446,7 @@ export function BamboraPayment({
               <Button
                 type="submit"
                 disabled={processing || !bamboraLoaded || !!scriptError}
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                className="w-full bg-green-600 hover:bg-green-700"
                 size="lg"
               >
                 {processing ? (
