@@ -176,9 +176,6 @@ export function ReviewStep({ contractData, renewalState, setRenewalState, onNext
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <Button size="lg" onClick={onNext} className="min-w-[140px]">
-            Next
-          </Button>
         </div>
       </CardContent>
     </Card>

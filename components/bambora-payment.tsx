@@ -440,6 +440,13 @@ export function BamboraPayment({
               </Alert>
             )}
 
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+              <p className="text-blue-800 font-medium">
+                Payment amount: ${fixedAmount.toFixed(2)}
+                {isRecurring && " (1st installment)"}
+              </p>
+            </div>
+
             <div className="pt-4">
               <Button
                 type="submit"
