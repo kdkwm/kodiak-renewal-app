@@ -38,7 +38,7 @@ export function BamboraPayment({
     cardholder_name: "",
     email: "",
     phone: "",
-    address: "",
+    address: contractData?.serviceAddress || "", // Prefill address from contract data
     city: "",
     state: "ON",
     postal_code: "",
@@ -311,25 +311,27 @@ export function BamboraPayment({
                 onChange={(e) => handleInputChange("cardholder_name", e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={billingData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                required
-                value={billingData.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={billingData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  required
+                  value={billingData.phone}
+                  onChange={(e) => handleInputChange("phone", e.target.value)}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">Address *</Label>
@@ -406,7 +408,7 @@ export function BamboraPayment({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Expiry Date *</Label>
+                <Label>Expiry (MM/YY) *</Label>
                 <div
                   id="card-expiry"
                   className="border rounded-md px-3 py-2 min-h-[40px] bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
@@ -444,7 +446,7 @@ export function BamboraPayment({
               <Button
                 type="submit"
                 disabled={processing || !bamboraLoaded || !!scriptError}
-                className="min-w-[140px] bg-green-600 hover:bg-green-700"
+                className="flex-1 bg-green-600 hover:bg-green-700"
                 size="lg"
               >
                 {processing ? (

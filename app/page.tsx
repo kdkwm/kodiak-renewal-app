@@ -234,7 +234,7 @@ export default function ContractRenewal() {
             </div>
           </div>
 
-          <div className="text-center mt-12 text-sm text-slate-500">© 2025 Kodiak Snowblowing & Lawncare Inc.</div>
+          <div className="text-center mt-8 text-sm text-slate-500">© 2025 Kodiak Snowblowing & Lawncare Inc.</div>
         </div>
       </div>
     )
@@ -386,7 +386,7 @@ export default function ContractRenewal() {
         {renderCurrentStep()}
 
         {/* Footer */}
-        <div className="text-center mt-12 text-sm text-slate-500">© 2025 Kodiak Snowblowing & Lawncare Inc.</div>
+        <div className="text-center mt-8 text-sm text-slate-500">© 2025 Kodiak Snowblowing & Lawncare Inc.</div>
       </div>
     </div>
   )

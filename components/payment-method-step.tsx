@@ -29,91 +29,151 @@ export function PaymentMethodStep({
 
   if (renewalState.selectedPaymentMethod === "credit") {
     return (
-      <BamboraPayment
-        contractData={contractData}
-        renewalState={renewalState}
-        paymentAmount={paymentAmount}
-        onPaymentComplete={onPaymentComplete}
-        onBack={onPrev}
-      />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <BamboraPayment
+            contractData={contractData}
+            renewalState={renewalState}
+            paymentAmount={paymentAmount}
+            onPaymentComplete={onPaymentComplete}
+            onBack={onPrev}
+          />
+        </div>
+      </div>
     )
   }
 
   if (renewalState.selectedPaymentMethod === "etransfer") {
+    const companyEmail = contractData.company === "KSB" ? "info@kodiaksnow.ca" : "info@kodiaksnowremoval.ca"
+    const isInstallments = (renewalState?.selectedPayments || 1) > 1
+
     return (
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Mail className="w-6 h-6 text-blue-600" />
-            <CardTitle className="text-2xl">Interac e-Transfer Payment</CardTitle>
-          </div>
-          <CardDescription>Send your payment via Interac e-Transfer</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="font-semibold text-blue-800 mb-4">Payment Instructions</h3>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Mail className="w-6 h-6 text-blue-600" />
+                <CardTitle className="text-2xl">Interac e-Transfer Payment</CardTitle>
+              </div>
+              <CardDescription>Follow these steps to complete your payment</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-semibold text-lg mb-4">One-Time Payment</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        1
+                      </div>
+                      <p className="text-sm">Log in to your online banking (via website or app).</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        2
+                      </div>
+                      <p className="text-sm">Go to the Interac e-Transfer or Send Money section.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        3
+                      </div>
+                      <p className="text-sm">Select Send an e-Transfer.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        4
+                      </div>
+                      <p className="text-sm">
+                        Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        5
+                      </div>
+                      <p className="text-sm">
+                        Enter the payment amount and <strong>add your name/address in the message</strong> so we can
+                        match it to your account.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        6
+                      </div>
+                      <p className="text-sm">Review the details and click Send.</p>
+                    </div>
+                  </div>
+                </div>
 
-            <div className="space-y-4 text-sm">
-              <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                <span className="font-medium text-blue-700">Amount:</span>
-                <span className="font-bold text-blue-800 text-lg">${paymentAmount.toFixed(2)}</span>
+                {isInstallments && (
+                  <div className="border-t pt-6">
+                    <h3 className="font-semibold text-lg mb-4">If You're Paying in Installments</h3>
+                    <p className="text-sm italic mb-4">(Follow the One-Time Payment steps above for each payment.)</p>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                          1
+                        </div>
+                        <p className="text-sm">Make your first payment now.</p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                          2
+                        </div>
+                        <p className="text-sm">
+                          On the agreed dates, log in each month to send the next payment manually.
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                          3
+                        </div>
+                        <p className="text-sm">Payment Schedule:</p>
+                      </div>
+                      <div className="ml-9 space-y-1 text-sm">
+                        {Array.from({ length: renewalState?.selectedPayments || 1 }, (_, i) => (
+                          <div key={i} className="flex justify-between">
+                            <span>• {i === 0 ? "1st" : i === 1 ? "2nd" : i === 2 ? "3rd" : `${i + 1}th`} Payment:</span>
+                            <span>
+                              ${paymentAmount.toFixed(2)} – {i === 0 ? "[Today]" : "[Date]"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                          4
+                        </div>
+                        <p className="text-sm">
+                          Ensure each payment is sent to <span className="font-mono text-blue-600">{companyEmail}</span>{" "}
+                          with your name/address in the message.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-3">
-                <div>
-                  <span className="font-medium text-blue-700">Send to:</span>
-                  <p className="text-blue-800 font-mono">payments@kodiaksnow.ca</p>
-                </div>
-
-                <div>
-                  <span className="font-medium text-blue-700">Security Question:</span>
-                  <p className="text-blue-800">What is the service address?</p>
-                </div>
-
-                <div>
-                  <span className="font-medium text-blue-700">Security Answer:</span>
-                  <p className="text-blue-800 font-mono">{contractData.serviceAddress}</p>
-                </div>
-
-                <div>
-                  <span className="font-medium text-blue-700">Message/Reference:</span>
-                  <p className="text-blue-800 font-mono">Winter 2025/2026 Renewal</p>
-                </div>
+              <div className="flex flex-col gap-3 pt-4">
+                <Button size="lg" onClick={onPaymentComplete} className="w-full bg-blue-600 hover:bg-blue-700">
+                  I've sent the eTransfer
+                </Button>
+                {isInstallments && (
+                  <Button size="lg" variant="outline" className="w-full bg-transparent">
+                    Remind me about future payments
+                  </Button>
+                )}
+                <Button size="lg" variant="outline" onClick={onPrev} className="w-full bg-transparent">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
               </div>
-            </div>
-          </div>
-
-          {(renewalState?.selectedPayments || 1) > 1 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <h4 className="font-semibold text-amber-800 mb-2">Installment Payment Schedule</h4>
-              <p className="text-amber-700 text-sm">
-                You have selected {renewalState?.selectedPayments || 1} payments of ${paymentAmount.toFixed(2)} each.
-                Please send the first payment now, and we will contact you for subsequent payments.
-              </p>
-            </div>
-          )}
-
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-            <h4 className="font-semibold text-slate-700 mb-2">Important Notes</h4>
-            <ul className="text-sm text-slate-600 space-y-1">
-              <li>• Please ensure the security question and answer match exactly</li>
-              <li>• Include the reference message for faster processing</li>
-              <li>• Your contract will be activated once payment is received</li>
-              <li>• You will receive a confirmation email within 24 hours</li>
-            </ul>
-          </div>
-
-          <div className="flex justify-between pt-4 gap-3">
-            <Button size="lg" variant="outline" onClick={onPrev} className="min-w-[140px] bg-transparent">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-            <Button size="lg" onClick={onPaymentComplete} className="min-w-[140px] bg-blue-600 hover:bg-blue-700">
-              Complete Renewal
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     )
   }
 
