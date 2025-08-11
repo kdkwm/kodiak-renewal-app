@@ -211,6 +211,7 @@ export function BamboraPayment({
                 installments: totalInstallments,
                 billingData,
                 contractData,
+                renewalState,
               }
             : {
                 token: result.token,
@@ -218,6 +219,7 @@ export function BamboraPayment({
                 isRecurring: false,
                 contractData,
                 billingData,
+                renewalState,
               }
 
           const resp = await fetch(endpoint, {

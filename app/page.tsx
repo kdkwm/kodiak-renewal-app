@@ -187,7 +187,7 @@ export default function ContractRenewal() {
     const paymentAmount = total / (renewalState?.selectedPayments || 1)
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+      <div className="bg-gradient-to-br from-green-50 to-emerald-100">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="text-center">
             <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
@@ -232,9 +232,9 @@ export default function ContractRenewal() {
                 A confirmation email has been sent to your registered email address.
               </p>
             </div>
-          </div>
 
-          <div className="text-center mt-8 text-sm text-slate-500">© 2025 Kodiak Snowblowing & Lawncare Inc.</div>
+            <div className="text-center mt-8 text-sm text-slate-500">© 2025 Kodiak Snowblowing & Lawncare Inc.</div>
+          </div>
         </div>
       </div>
     )
