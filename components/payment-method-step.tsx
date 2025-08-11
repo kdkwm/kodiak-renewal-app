@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { CreditCard, ArrowLeft, Mail } from "lucide-react"
 import { BamboraPayment } from "./bambora-payment"
+import { useState } from "react"
 
 interface PaymentMethodStepProps {
   contractData: any
@@ -26,6 +27,8 @@ export function PaymentMethodStep({
   const hst = Math.round(subtotal * 0.13 * 100) / 100
   const total = Math.round((subtotal + hst) * 100) / 100
   const paymentAmount = Math.round((total / (renewalState?.selectedPayments || 1)) * 100) / 100
+
+  const [emailCopied, setEmailCopied] = useState(false)
 
   if (renewalState.selectedPaymentMethod === "credit") {
     return (
@@ -57,25 +60,27 @@ export function PaymentMethodStep({
       const dates = []
       const today = new Date()
 
-      for (let i = 0; i < (renewalState?.selectedPayments || 1); i++) {
-        if (i === 0) {
-          dates.push("Today")
-        } else {
-          const futureDate = new Date(today)
-          futureDate.setMonth(today.getMonth() + i)
-          dates.push(
-            futureDate.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }),
-          )
-        }
+      for (let i = 1; i < (renewalState?.selectedPayments || 1); i++) {
+        const futureDate = new Date(today)
+        futureDate.setMonth(today.getMonth() + i)
+        dates.push(
+          futureDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+        )
       }
       return dates
     }
 
     const paymentDates = getPaymentDates()
+
+    const copyEmail = () => {
+      navigator.clipboard.writeText(companyEmail)
+      setEmailCopied(true)
+      setTimeout(() => setEmailCopied(false), 2000)
+    }
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
@@ -94,11 +99,11 @@ export function PaymentMethodStep({
               </div>
               <CardDescription>Follow these steps to complete your payment</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-6">
+            <CardContent className="space-y-8">
+              <div className="space-y-8">
                 <div>
-                  <h3 className="font-semibold text-lg mb-4">One-Time Payment</h3>
-                  <div className="space-y-3">
+                  <h3 className="font-semibold text-lg mb-6">One-Time Payment</h3>
+                  <div className="space-y-4">
                     <div className="flex items-start gap-3">
                       <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
                         1
@@ -127,11 +132,9 @@ export function PaymentMethodStep({
                           size="sm"
                           variant="outline"
                           className="ml-2 h-6 px-2 text-xs bg-transparent"
-                          onClick={() => {
-                            navigator.clipboard.writeText(companyEmail)
-                          }}
+                          onClick={copyEmail}
                         >
-                          Copy email
+                          {emailCopied ? "Copied!" : "Copy email"}
                         </Button>
                         .
                       </p>
@@ -155,10 +158,10 @@ export function PaymentMethodStep({
                 </div>
 
                 {isInstallments && (
-                  <div className="border-t pt-6">
-                    <h3 className="font-semibold text-lg mb-4">How to make your installment payments</h3>
-                    <p className="text-sm italic mb-4">(Follow the One-Time Payment steps above for each payment.)</p>
-                    <div className="space-y-3">
+                  <div className="border-t pt-8">
+                    <h3 className="font-semibold text-lg mb-6">How to make your installment payments</h3>
+                    <p className="text-sm italic mb-6">(Follow the One-Time Payment steps above for each payment.)</p>
+                    <div className="space-y-4">
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
                           1
@@ -181,7 +184,7 @@ export function PaymentMethodStep({
                       </div>
                       <div className="ml-9 bg-slate-50 border border-slate-200 rounded-lg p-4">
                         <div className="space-y-2">
-                          {paymentDates.slice(1).map((date, i) => (
+                          {paymentDates.map((date, i) => (
                             <div key={i} className="flex justify-between items-center py-1">
                               <span className="font-medium text-slate-700">
                                 {i === 0 ? "2nd" : i === 1 ? "3rd" : `${i + 2}th`} Payment:

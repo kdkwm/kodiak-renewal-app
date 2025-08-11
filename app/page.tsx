@@ -72,7 +72,6 @@ export default function ContractRenewal() {
   const [steps, setSteps] = useState(getSteps(false))
 
   useEffect(() => {
-    // 1) Parse query params
     const url = new URL(window.location.href)
     const q = url.searchParams
 
@@ -85,50 +84,106 @@ export default function ContractRenewal() {
     const isPlatinum = parseBool(q.get("isPlatinum") || q.get("platinum"), false)
     const isWalkway = parseBool(q.get("isWalkway") || q.get("walkway"), false)
     const payments = Math.max(1, Math.min(12, parseNumber(q.get("payments"), 1)))
-    // optional preset method (not required)
     const method = (q.get("method") as RenewalState["selectedPaymentMethod"]) || ""
 
-    const minimalOk = address.length > 0 && Number.isFinite(subtotal) && subtotal >= 0 && contractId.length > 0
+    const hasQueryParams = address.length > 0 && Number.isFinite(subtotal) && subtotal >= 0 && contractId.length > 0
 
-    if (!minimalOk) {
-      setHasValidData(false)
-      setContractData(null)
-      // 2) Hide query params even on error
+    if (hasQueryParams) {
+      const savedContractData = localStorage.getItem("kodiak-contract-data")
+      let shouldUseQueryParams = true
+
+      if (savedContractData) {
+        try {
+          const existingContract = JSON.parse(savedContractData)
+          if (existingContract.contractId === contractId) {
+            shouldUseQueryParams = false
+          }
+        } catch (e) {
+          localStorage.removeItem("kodiak-contract-data")
+          localStorage.removeItem("kodiak-renewal-state")
+        }
+      }
+
+      if (shouldUseQueryParams) {
+        const data: ContractData = {
+          serviceAddress: address,
+          contractSubtotal: subtotal,
+          company,
+          contractId,
+          isPlatinum,
+          isWalkway,
+        }
+
+        const initialRenewalState: RenewalState = {
+          platinumService: false,
+          selectedPayments: payments,
+          selectedPaymentMethod: method || "",
+          currentStep: isPlatinum ? 1 : 1,
+        }
+
+        setContractData(data)
+        setHasValidData(true)
+        setSteps(getSteps(isPlatinum))
+        setRenewalState(initialRenewalState)
+
+        localStorage.setItem("kodiak-contract-data", JSON.stringify(data))
+        localStorage.setItem("kodiak-renewal-state", JSON.stringify(initialRenewalState))
+      } else {
+        const savedRenewalState = localStorage.getItem("kodiak-renewal-state")
+        if (savedContractData && savedRenewalState) {
+          try {
+            const contractData = JSON.parse(savedContractData)
+            const renewalState = JSON.parse(savedRenewalState)
+
+            setContractData(contractData)
+            setRenewalState(renewalState)
+            setHasValidData(true)
+            setSteps(getSteps(contractData.isPlatinum))
+          } catch (e) {
+            localStorage.removeItem("kodiak-contract-data")
+            localStorage.removeItem("kodiak-renewal-state")
+            setHasValidData(false)
+            setContractData(null)
+          }
+        }
+      }
+
       if (url.search) {
         window.history.replaceState(null, "", url.pathname)
       }
-      setLoading(false)
-      return
-    }
+    } else {
+      const savedContractData = localStorage.getItem("kodiak-contract-data")
+      const savedRenewalState = localStorage.getItem("kodiak-renewal-state")
 
-    const data: ContractData = {
-      serviceAddress: address,
-      contractSubtotal: subtotal,
-      company,
-      contractId,
-      isPlatinum,
-      isWalkway,
-    }
+      if (savedContractData && savedRenewalState) {
+        try {
+          const contractData = JSON.parse(savedContractData)
+          const renewalState = JSON.parse(savedRenewalState)
 
-    setContractData(data)
-    setHasValidData(true)
-    setSteps(getSteps(isPlatinum))
-
-    // Initialize selections from query
-    setRenewalState((prev) => ({
-      ...prev,
-      selectedPayments: payments,
-      selectedPaymentMethod: method || "",
-      currentStep: isPlatinum ? 1 : 1,
-    }))
-
-    // 3) Immediately hide query so user can't tamper
-    if (url.search) {
-      window.history.replaceState(null, "", url.pathname)
+          setContractData(contractData)
+          setRenewalState(renewalState)
+          setHasValidData(true)
+          setSteps(getSteps(contractData.isPlatinum))
+        } catch (e) {
+          localStorage.removeItem("kodiak-contract-data")
+          localStorage.removeItem("kodiak-renewal-state")
+          setHasValidData(false)
+          setContractData(null)
+        }
+      } else {
+        setHasValidData(false)
+        setContractData(null)
+      }
     }
 
     setLoading(false)
   }, [getSteps])
+
+  useEffect(() => {
+    if (hasValidData && renewalState) {
+      localStorage.setItem("kodiak-renewal-state", JSON.stringify(renewalState))
+    }
+  }, [renewalState, hasValidData])
 
   const nextStep = () => {
     setRenewalState((prev) => {
@@ -153,6 +208,9 @@ export default function ContractRenewal() {
 
   const handlePaymentComplete = () => {
     setPaymentComplete(true)
+    localStorage.removeItem("kodiak-contract-data")
+    localStorage.removeItem("kodiak-renewal-state")
+    window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   if (loading) {
@@ -167,7 +225,6 @@ export default function ContractRenewal() {
   }
 
   if (!hasValidData || !contractData) {
-    // Friendly message (no technical details or param list)
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-6">
         <div className="max-w-xl mx-auto bg-white border rounded-lg shadow p-6 text-center">
@@ -178,7 +235,6 @@ export default function ContractRenewal() {
     )
   }
 
-  // Payment complete confirmation screen
   if (paymentComplete) {
     const platinumUpgrade =
       !contractData.isPlatinum && renewalState.platinumService ? (contractData.isWalkway ? 250 : 150) : 0
@@ -244,6 +300,28 @@ export default function ContractRenewal() {
                   <div className="flex justify-between text-lg font-bold text-green-700 border-t pt-2">
                     <span>Total Contract Value:</span>
                     <span>${total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-bold text-green-700 mb-4">What's next?</h3>
+                  <div className="space-y-3 text-left">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-green-700 text-sm">
+                        <strong>Marker Installation:</strong> We'll begin installing markers at some point in
+                        October/November. We'll stay in touch about when the installation process starts for your area.
+                      </p>
+                    </div>
+                    {(renewalState?.selectedPayments || 1) > 1 && (
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                        <p className="text-green-700 text-sm">
+                          <strong>Future Payments:</strong> We'll automatically capture your remaining payments every 30
+                          days until your full contract amount is complete. No action required on your part.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -352,12 +430,10 @@ export default function ContractRenewal() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {renewalState.currentStep !== steps.length && (
           <>
-            {/* Header */}
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-slate-800 mb-2">Kodiak Snow Removal</h1>
               <p className="text-slate-600">Winter 2025/2026 Season Renewal</p>
 
-              {/* Service Address */}
               <div className="mt-4 p-4 bg-blue-100 rounded-lg border border-blue-200 max-w-2xl mx-auto">
                 <div className="flex items-center justify-center gap-2 text-blue-800">
                   <Home className="w-5 h-5" />
@@ -374,7 +450,6 @@ export default function ContractRenewal() {
               </div>
             </div>
 
-            {/* Progress Steps */}
             <div className="mb-8">
               <div className="flex items-center justify-center mb-6 px-4">
                 {steps.map((step, index) => {
@@ -408,10 +483,8 @@ export default function ContractRenewal() {
           </>
         )}
 
-        {/* Current Step Content */}
         {renderCurrentStep()}
 
-        {/* Footer */}
         <div className="text-center mt-8 text-sm text-slate-500">© 2025 Kodiak Snowblowing & Lawncare Inc.</div>
       </div>
     </div>
