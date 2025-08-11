@@ -203,15 +203,22 @@ export function BamboraPayment({
             return
           }
 
-          const endpoint = "/api/process-bambora-payment"
-          const payload = {
-            token: result.token,
-            amount: fixedAmount,
-            isRecurring,
-            contractData,
-            billingData,
-            installments: totalInstallments,
-          }
+          const endpoint = isRecurring ? "/api/charge-initial-and-queue" : "/api/process-bambora-payment"
+          const payload = isRecurring
+            ? {
+                token: result.token,
+                amount: fixedAmount,
+                installments: totalInstallments,
+                billingData,
+                contractData,
+              }
+            : {
+                token: result.token,
+                amount: fixedAmount,
+                isRecurring: false,
+                contractData,
+                billingData,
+              }
 
           const resp = await fetch(endpoint, {
             method: "POST",
