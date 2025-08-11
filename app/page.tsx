@@ -89,64 +89,29 @@ export default function ContractRenewal() {
     const hasQueryParams = address.length > 0 && Number.isFinite(subtotal) && subtotal >= 0 && contractId.length > 0
 
     if (hasQueryParams) {
-      const savedContractData = localStorage.getItem("kodiak-contract-data")
-      let shouldUseQueryParams = true
-
-      if (savedContractData) {
-        try {
-          const existingContract = JSON.parse(savedContractData)
-          if (existingContract.contractId === contractId) {
-            shouldUseQueryParams = false
-          }
-        } catch (e) {
-          localStorage.removeItem("kodiak-contract-data")
-          localStorage.removeItem("kodiak-renewal-state")
-        }
+      const data: ContractData = {
+        serviceAddress: address,
+        contractSubtotal: subtotal,
+        company,
+        contractId,
+        isPlatinum,
+        isWalkway,
       }
 
-      if (shouldUseQueryParams) {
-        const data: ContractData = {
-          serviceAddress: address,
-          contractSubtotal: subtotal,
-          company,
-          contractId,
-          isPlatinum,
-          isWalkway,
-        }
-
-        const initialRenewalState: RenewalState = {
-          platinumService: false,
-          selectedPayments: payments,
-          selectedPaymentMethod: method || "",
-          currentStep: isPlatinum ? 1 : 1,
-        }
-
-        setContractData(data)
-        setHasValidData(true)
-        setSteps(getSteps(isPlatinum))
-        setRenewalState(initialRenewalState)
-
-        localStorage.setItem("kodiak-contract-data", JSON.stringify(data))
-        localStorage.setItem("kodiak-renewal-state", JSON.stringify(initialRenewalState))
-      } else {
-        const savedRenewalState = localStorage.getItem("kodiak-renewal-state")
-        if (savedContractData && savedRenewalState) {
-          try {
-            const contractData = JSON.parse(savedContractData)
-            const renewalState = JSON.parse(savedRenewalState)
-
-            setContractData(contractData)
-            setRenewalState(renewalState)
-            setHasValidData(true)
-            setSteps(getSteps(contractData.isPlatinum))
-          } catch (e) {
-            localStorage.removeItem("kodiak-contract-data")
-            localStorage.removeItem("kodiak-renewal-state")
-            setHasValidData(false)
-            setContractData(null)
-          }
-        }
+      const initialRenewalState: RenewalState = {
+        platinumService: false,
+        selectedPayments: payments,
+        selectedPaymentMethod: method || "",
+        currentStep: isPlatinum ? 1 : 1,
       }
+
+      setContractData(data)
+      setHasValidData(true)
+      setSteps(getSteps(isPlatinum))
+      setRenewalState(initialRenewalState)
+
+      localStorage.setItem("kodiak-contract-data", JSON.stringify(data))
+      localStorage.setItem("kodiak-renewal-state", JSON.stringify(initialRenewalState))
 
       if (url.search) {
         window.history.replaceState(null, "", url.pathname)
