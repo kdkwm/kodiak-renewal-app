@@ -256,7 +256,13 @@ export default function ContractRenewal() {
           )
         case 2:
           return (
-            <ReviewStep contractData={contractData} renewalState={renewalState} onNext={nextStep} onPrev={prevStep} />
+            <ReviewStep
+              contractData={contractData}
+              renewalState={renewalState}
+              setRenewalState={setRenewalState}
+              onNext={nextStep}
+              onPrev={prevStep}
+            />
           )
         case 3:
           return (
@@ -295,7 +301,13 @@ export default function ContractRenewal() {
           )
         case 3:
           return (
-            <ReviewStep contractData={contractData} renewalState={renewalState} onNext={nextStep} onPrev={prevStep} />
+            <ReviewStep
+              contractData={contractData}
+              renewalState={renewalState}
+              setRenewalState={setRenewalState}
+              onNext={nextStep}
+              onPrev={prevStep}
+            />
           )
         case 4:
           return (
