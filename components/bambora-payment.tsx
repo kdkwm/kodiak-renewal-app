@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, CreditCard, Loader2, ArrowLeft } from "lucide-react"
+import { AlertCircle, CreditCard, Loader2 } from "lucide-react"
 
 export interface BamboraPaymentProps {
   contractData: any
@@ -438,15 +438,11 @@ export function BamboraPayment({
               </Alert>
             )}
 
-            <div className="flex justify-between pt-4 gap-3">
-              <Button size="lg" variant="outline" onClick={onBack} className="min-w-[140px] bg-transparent">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
+            <div className="pt-4">
               <Button
                 type="submit"
                 disabled={processing || !bamboraLoaded || !!scriptError}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-green-600 hover:bg-green-700 h-12"
                 size="lg"
               >
                 {processing ? (

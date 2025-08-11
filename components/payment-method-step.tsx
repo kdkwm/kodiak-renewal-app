@@ -31,8 +31,8 @@ export function PaymentMethodStep({
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <div className="mb-6">
-            <Button size="lg" variant="outline" onClick={onPrev} className="bg-white">
+          <div className="mb-6 flex justify-center">
+            <Button size="lg" variant="outline" onClick={onPrev} className="bg-white h-12">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -80,8 +80,8 @@ export function PaymentMethodStep({
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <div className="mb-6">
-            <Button size="lg" variant="outline" onClick={onPrev} className="bg-white">
+          <div className="mb-6 flex justify-center">
+            <Button size="lg" variant="outline" onClick={onPrev} className="bg-white h-12">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -122,7 +122,18 @@ export function PaymentMethodStep({
                         4
                       </div>
                       <p className="text-sm">
-                        Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>.
+                        Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="ml-2 h-6 px-2 text-xs bg-transparent"
+                          onClick={() => {
+                            navigator.clipboard.writeText(companyEmail)
+                          }}
+                        >
+                          Copy email
+                        </Button>
+                        .
                       </p>
                     </div>
                     <div className="flex items-start gap-3">
@@ -170,10 +181,10 @@ export function PaymentMethodStep({
                       </div>
                       <div className="ml-9 bg-slate-50 border border-slate-200 rounded-lg p-4">
                         <div className="space-y-2">
-                          {paymentDates.map((date, i) => (
+                          {paymentDates.slice(1).map((date, i) => (
                             <div key={i} className="flex justify-between items-center py-1">
                               <span className="font-medium text-slate-700">
-                                {i === 0 ? "1st" : i === 1 ? "2nd" : i === 2 ? "3rd" : `${i + 1}th`} Payment:
+                                {i === 0 ? "2nd" : i === 1 ? "3rd" : `${i + 2}th`} Payment:
                               </span>
                               <div className="text-right">
                                 <div className="font-semibold text-green-600">${paymentAmount.toFixed(2)}</div>
@@ -198,11 +209,11 @@ export function PaymentMethodStep({
               </div>
 
               <div className="flex flex-col gap-3 pt-4">
-                <Button size="lg" onClick={onPaymentComplete} className="w-full bg-blue-600 hover:bg-blue-700">
+                <Button size="lg" onClick={onPaymentComplete} className="w-full bg-blue-600 hover:bg-blue-700 h-12">
                   I've sent the eTransfer
                 </Button>
                 {isInstallments && (
-                  <Button size="lg" variant="outline" className="w-full bg-transparent">
+                  <Button size="lg" variant="outline" className="w-full bg-transparent h-12">
                     Remind me about future payments
                   </Button>
                 )}
