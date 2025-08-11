@@ -126,7 +126,7 @@ $renewal_url = "https://renewal.yourdomain.com?" . http_build_query([
 For issues or questions, contact: info@kodiaksnow.ca
 \`\`\`
 
-```shellscript file="scripts/setup-github.sh"
+\`\`\`shellscript file="scripts/setup-github.sh"
 #!/bin/bash
 
 echo "🔧 Setting up GitHub repository for Contract Renewal System..."
