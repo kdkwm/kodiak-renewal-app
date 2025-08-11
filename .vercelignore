@@ -1,0 +1,12 @@
+node_modules
+.git
+.next
+.env*.local
+*.log
+.DS_Store
+coverage
+.vscode
+.idea
+yarn.lock
+pnpm-lock.yaml
+.yarnrc

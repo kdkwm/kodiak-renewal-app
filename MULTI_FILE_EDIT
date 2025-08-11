@@ -1,0 +1,528 @@
+\`\`\`
+// DeleteFile /ops/queue
+
+// app/globals.css
+// Add the following at the end of the file (keep existing content as-is):
+// html {
+//   scroll-behavior: smooth;
+// }
+
+// components/bambora-payment.tsx:
+// 1) Remove the entire Sandbox Test Card Alert block.
+//    Delete from:
+//      <Alert className="border-green-200 bg-green-50">
+//    through its closing </Alert>.
+
+// 2) Change the submit button text for recurring payments from
+//      "Pay Today & Schedule {futurePayments} via {schedulingMode === "wordpress" ? "WordPress" : "No scheduling"}"
+//    to:
+//      "Complete your renewal"
+//
+//    Replace the JSX inside the recurring branch of the Button with:
+//      <>
+//        <Calendar className="w-4 h-4 mr-2" />
+//        Complete your renewal
+//      </>
+
+// 3) Remove the bottom note that says “A Payment Profile is created today...”.
+//    In the block shown only when isRecurring is true, remove the final paragraph:
+//      <p className="text-slate-500">A Payment Profile is created today. Future charges use the profile.</p>
+
+// 4) Remove any reference to /ops/queue in helper texts.
+//    Remove the "Tip: Manage queued payments at /ops/queue" line under scheduling mode.
+
+// Replace the entire components/payment-method-step.tsx with this implementation that matches the screenshot, uses proper icons, and offers bigger buttons:
+
+// components/payment-method-step.tsx
+"use client"
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Mail, CreditCard } from 'lucide-react'
+import { useEffect, useRef } from "react"
+
+interface PaymentMethodStepProps {
+  contractData: any
+  renewalState: any
+  setRenewalState: (updater: any) => void
+  onNext: () => void
+  onPrev: () => void
+}
+
+export function PaymentMethodStep({
+  contractData,
+  renewalState,
+  setRenewalState,
+  onNext,
+  onPrev,
+}: PaymentMethodStepProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // Smoothly ensure this section is visible on step entry
+    containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [])
+
+  const choose = (m: "etransfer" | "credit") => {
+    setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: m }))
+  }
+
+  const method = renewalState?.selectedPaymentMethod || ""
+
+  return (
+    <Card ref={containerRef} className="max-w-3xl mx-auto">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl flex items-center justify-center gap-2">
+          Payment Method
+        </CardTitle>
+        <CardDescription>Complete your payment to finalize the contract</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-3">
+          <h3 className="font-semibold text-slate-800">Choose Payment Method</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => choose("etransfer")}
+              className={`w-full rounded-xl border p-5 text-left transition
+                ${method === "etransfer" ? "ring-2 ring-blue-600 border-blue-300 bg-white" : "hover:bg-slate-50 border-slate-200"}
+              `}
+              aria-pressed={method === "etransfer"}
+            >
+              <div className="flex items-center gap-3">
+                <Mail className={`w-6 h-6 ${method === "etransfer" ? "text-blue-600" : "text-slate-600"}`} />
+                <div className="text-lg font-semibold">Interac e‑Transfer</div>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">
+                Send payment via email transfer. You’ll see full instructions on the next step.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => choose("credit")}
+              className={`w-full rounded-xl border p-5 text-left transition
+                ${method === "credit" ? "ring-2 ring-green-600 border-green-300 bg-white" : "hover:bg-slate-50 border-slate-200"}
+              `}
+              aria-pressed={method === "credit"}
+            >
+              <div className="flex items-center gap-3">
+                <CreditCard className={`w-6 h-6 ${method === "credit" ? "text-green-600" : "text-slate-600"}`} />
+                <div className="text-lg font-semibold">Credit Card</div>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">
+                Pay securely online. Cards are processed automatically.
+              </p>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex justify-between pt-2 gap-3">
+          <Button size="lg" variant="outline" onClick={onPrev} className="min-w-[140px] bg-transparent">
+            Back
+          </Button>
+          <Button
+            size="lg"
+            onClick={onNext}
+            disabled={!method}
+            className={`${method === "credit" ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"} min-w-[180px]`}
+          >
+            Continue
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// components/payment-schedule-step.tsx:
+// 1) Do not preselect "Pay in installments". Use a local mainChoice state for visual selection and keep showInstallments false until the user explicitly chooses. Also avoid auto-setting selectedPayments to 2 when the user clicks “installments”; only set when they click 2/3/4.
+// 2) Make Back/Continue buttons larger and ensure smooth scroll on entry.
+
+// Replace the component with:
+
+"use client"
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Calendar, ArrowRight, ArrowLeft } from 'lucide-react'
+import { useState, useRef, useEffect } from "react"
+
+interface PaymentScheduleStepProps {
+  contractData: any
+  renewalState: any
+  setRenewalState: any
+  onNext: () => void
+  onPrev: () => void
+  showBackButton?: boolean
+}
+
+export function PaymentScheduleStep({
+  contractData,
+  renewalState,
+  setRenewalState,
+  onNext,
+  onPrev,
+  showBackButton = true,
+}: PaymentScheduleStepProps) {
+  const platinumUpgrade =
+    !contractData.isPlatinum && renewalState.platinumService ? (contractData.isWalkway ? 250 : 150) : 0
+  const subtotal = contractData.contractSubtotal + platinumUpgrade
+  const total = Math.round(subtotal * 1.13 * 100) / 100
+
+  // Nothing preselected visually on first load
+  const [mainChoice, setMainChoice] = useState<"full" | "installments" | null>(null)
+  const [showInstallments, setShowInstallments] = useState(false)
+  const installmentSectionRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [])
+
+  // Smooth scroll to installment section after it is revealed
+  useEffect(() => {
+    if (showInstallments && installmentSectionRef.current) {
+      setTimeout(() => {
+        installmentSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        })
+      }, 150)
+    }
+  }, [showInstallments])
+
+  const handleMainPaymentChoice = (type: "full" | "installments") => {
+    setMainChoice(type)
+    if (type === "full") {
+      setShowInstallments(false)
+      setRenewalState((prev: any) => ({ ...prev, selectedPayments: 1 }))
+    } else {
+      // Reveal installment options but do not preselect a count
+      setShowInstallments(true)
+      // Do not change selectedPayments here
+    }
+  }
+
+  const handleInstallmentChoice = (payments: number) => {
+    setRenewalState((prev: any) => ({ ...prev, selectedPayments: payments }))
+  }
+
+  const generatePaymentSchedule = (numPayments: number) => {
+    const paymentAmount = Math.round((total / numPayments) * 100) / 100
+    const schedule = []
+    const today = new Date()
+    for (let i = 0; i < numPayments; i++) {
+      const paymentDate = new Date(today)
+      paymentDate.setDate(today.getDate() + i * 30)
+      schedule.push({
+        number: i + 1,
+        date: paymentDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        amount: paymentAmount,
+      })
+    }
+    return schedule
+  }
+
+  const lowestMonthlyPayment = Math.round((total / 4) * 100) / 100
+
+  // Use renewalState.selectedPayments only for amounts/schedule, not for visual preselection
+  const selectedPayments: number = renewalState?.selectedPayments || 1
+
+  return (
+    <Card ref={containerRef} className="max-w-2xl mx-auto">
+      <CardHeader className="text-center">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Calendar className="w-6 h-6 text-emerald-500" />
+          <CardTitle className="text-2xl">Payment Schedule</CardTitle>
+        </div>
+        <CardDescription>Select your preferred payment option</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Main Payment Options */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            type="button"
+            className={`w-full p-6 h-auto rounded-xl border-2 text-left transition
+              ${mainChoice === "full" ? "ring-2 ring-blue-500 border-blue-300 bg-white" : "hover:bg-slate-50 border-slate-200"}
+            `}
+            onClick={() => handleMainPaymentChoice("full")}
+          >
+            <div className="w-full">
+              <div className="font-semibold text-lg mb-1">Pay in Full</div>
+              <div className="text-sm opacity-75">Complete payment today</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className={`w-full p-6 h-auto rounded-xl border-2 text-left transition
+              ${mainChoice === "installments" ? "ring-2 ring-emerald-500 border-emerald-300 bg-white" : "hover:bg-slate-50 border-slate-200"}
+            `}
+            onClick={() => handleMainPaymentChoice("installments")}
+          >
+            <div className="w-full">
+              <div className="font-semibold text-lg">Split into Installments</div>
+              <div className="text-sm opacity-75 whitespace-normal">
+                Make monthly payments as low as ${lowestMonthlyPayment.toFixed(2)}
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Installment Options */}
+        {showInstallments && (
+          <div ref={installmentSectionRef} className="space-y-4 border-t pt-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-slate-700 mb-4">How many installments would you like?</h3>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              {[2, 3, 4].map((numPayments) => {
+                const paymentAmount = Math.round((total / numPayments) * 100) / 100
+                const isSelected = selectedPayments === numPayments
+                return (
+                  <button
+                    key={numPayments}
+                    type="button"
+                    className={`p-5 h-auto rounded-xl border-2 transition flex flex-col items-center
+                      ${isSelected ? "ring-2 ring-emerald-500 border-emerald-300 bg-white" : "hover:bg-emerald-50 border-slate-200"}
+                    `}
+                    onClick={() => handleInstallmentChoice(numPayments)}
+                  >
+                    <div className={`font-bold text-2xl mb-1 ${isSelected ? "text-emerald-600" : "text-emerald-500"}`}>
+                      {numPayments}
+                    </div>
+                    <div className="text-sm opacity-75 mb-2">payments</div>
+                    <div className="font-semibold text-lg">${paymentAmount.toFixed(2)}</div>
+                    <div className="text-xs opacity-60">per month</div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Payment Schedule Preview */}
+            {selectedPayments > 1 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <h3 className="font-semibold text-amber-700 mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Payment Schedule
+                </h3>
+                <div className="space-y-2">
+                  {generatePaymentSchedule(selectedPayments).map((payment) => (
+                    <div key={payment.number} className="flex justify-between items-center text-sm">
+                      <span className="text-amber-600">
+                        Payment {payment.number} - {payment.date}
+                      </span>
+                      <span className="text-amber-700 font-medium">${payment.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-amber-600 mt-3 text-center">
+                  Credit card payments will be processed automatically on scheduled dates
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex justify-between pt-2 gap-3">
+          {showBackButton ? (
+            <Button size="lg" variant="outline" onClick={onPrev} className="min-w-[140px] bg-transparent">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          ) : (
+            <div />
+          )}
+          <Button size="lg" onClick={onNext} className="bg-emerald-600 hover:bg-emerald-700 min-w-[180px]">
+            Continue
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// Replace the entire app/renewal/page.tsx with a client-side stepper that:
+// * Reads query params on first load (address, subtotal, contractId, company, isPlatinum, isWalkway, payments).
+// * Immediately hides them via history.replaceState.
+// * Shows “Contract not found. Please contact us for more details.” if required fields are missing.
+// * Drives the existing steps/components.
+// * Uses smooth scrolling on step changes.
+
+// Content:
+
+// app/renewal/page.tsx
+"use client"
+
+import { useEffect, useMemo, useRef, useState } from "react"
+import { PaymentScheduleStep } from "@/components/payment-schedule-step"
+import { PaymentMethodStep } from "@/components/payment-method-step"
+import { ReviewStep } from "@/components/review-step"
+import { CreditCardModal } from "@/components/credit-card-modal"
+import { EtransferModal } from "@/components/etransfer-modal"
+import { Card, CardContent } from "@/components/ui/card"
+
+type ContractData = {
+  serviceAddress: string
+  contractId: string
+  company: "KSR" | "KSB"
+  isPlatinum: boolean
+  isWalkway: boolean
+  contractSubtotal: number
+}
+
+export default function RenewalPage() {
+  const [contractData, setContractData] = useState<ContractData | null>(null)
+  const [renewalState, setRenewalState] = useState<any>({
+    platinumService: false,
+    selectedPayments: 1,
+    selectedPaymentMethod: "",
+  })
+  const [step, setStep] = useState<0 | 1 | 2>(0)
+  const [showCC, setShowCC] = useState(false)
+  const [showET, setShowET] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Read and hide query params on first render
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const q = url.searchParams
+
+    const required = ["address", "subtotal", "contractId", "company"] as const
+    const missing = required.some((k) => !q.get(k))
+
+    if (missing) {
+      setContractData(null)
+      // Hide any existing params anyway
+      window.history.replaceState({}, "", `${url.pathname}`)
+      return
+    }
+
+    const data: ContractData = {
+      serviceAddress: q.get("address") || "",
+      contractId: q.get("contractId") || "",
+      company: (q.get("company") || "KSR") as any,
+      isPlatinum: (q.get("isPlatinum") || "false") === "true",
+      isWalkway: (q.get("isWalkway") || "false") === "true",
+      contractSubtotal: parseFloat(q.get("subtotal") || "0"),
+    }
+
+    const paymentsRaw = parseInt(q.get("payments") || "1", 10)
+    setRenewalState((prev: any) => ({
+      ...prev,
+      selectedPayments: Number.isFinite(paymentsRaw) && paymentsRaw > 0 ? paymentsRaw : 1,
+    }))
+
+    setContractData(data)
+    // Hide parameters
+    window.history.replaceState({}, "", `${url.pathname}`)
+  }, [])
+
+  // Smoothly bring the current step into view
+  useEffect(() => {
+    containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [step])
+
+  const paymentAmount = useMemo(() => {
+    if (!contractData) return 0
+    const platinumUpgrade =
+      !contractData.isPlatinum && renewalState.platinumService
+        ? contractData.isWalkway
+          ? 250
+          : 150
+        : 0
+    const subtotal = contractData.contractSubtotal + platinumUpgrade
+    const total = Math.round(subtotal * 1.13 * 100) / 100
+    return Math.round((total / (renewalState.selectedPayments || 1)) * 100) / 100
+  }, [contractData, renewalState])
+
+  if (contractData === null) {
+    return (
+      <div ref={containerRef} className="max-w-xl mx-auto mt-10">
+        <Card>
+          <CardContent className="p-6">
+            <h2 className="text-xl font-semibold mb-2">Contract not found</h2>
+            <p className="text-slate-600">Please contact us for more details.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const goNext = () => setStep((s) => (s < 2 ? ((s + 1) as any) : s))
+  const goPrev = () => setStep((s) => (s > 0 ? ((s - 1) as any) : s))
+
+  // When PaymentMethod step advances, open the appropriate modal and keep the step index
+  useEffect(() => {
+    setShowCC(false)
+    setShowET(false)
+  }, [step])
+
+  const openPayment = () => {
+    if (renewalState.selectedPaymentMethod === "credit") {
+      setShowCC(true)
+    } else if (renewalState.selectedPaymentMethod === "etransfer") {
+      setShowET(true)
+    }
+  }
+
+  return (
+    <div ref={containerRef} className="p-4 md:p-8">
+      {step === 0 && (
+        <PaymentScheduleStep
+          contractData={contractData}
+          renewalState={renewalState}
+          setRenewalState={setRenewalState}
+          onNext={goNext}
+          onPrev={() => {}}
+          showBackButton={false}
+        />
+      )}
+
+      {step === 1 && (
+        <PaymentMethodStep
+          contractData={contractData}
+          renewalState={renewalState}
+          setRenewalState={setRenewalState}
+          onNext={goNext}
+          onPrev={goPrev}
+        />
+      )}
+
+      {step === 2 && (
+        <ReviewStep
+          contractData={contractData}
+          renewalState={renewalState}
+          onNext={openPayment}
+          onPrev={goPrev}
+        />
+      )}
+
+      {/* Modals (UI only; backend untouched) */}
+      {showCC && (
+        <CreditCardModal
+          contractData={contractData}
+          renewalState={renewalState}
+          paymentAmount={paymentAmount}
+          onClose={() => setShowCC(false)}
+          onPaymentComplete={() => setShowCC(false)}
+        />
+      )}
+
+      {showET && (
+        <EtransferModal
+          contractData={contractData}
+          renewalState={renewalState}
+          paymentAmount={paymentAmount}
+          onClose={() => setShowET(false)}
+          onPaymentComplete={() => setShowET(false)}
+        />
+      )}
+    </div>
+  )
+}
+\`\`\`
