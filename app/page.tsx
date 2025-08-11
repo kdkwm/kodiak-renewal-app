@@ -194,6 +194,28 @@ export default function ContractRenewal() {
             <h1 className="text-4xl font-bold text-green-700 mb-4">Contract Renewal Complete!</h1>
             <p className="text-xl text-green-600 mb-8">Thank you for renewing your winter service contract</p>
 
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-green-700 mb-6">What's next?</h2>
+              <div className="max-w-2xl mx-auto text-left space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                  <p className="text-green-700">
+                    <strong>Marker Installation:</strong> We'll begin installing markers at some point in
+                    October/November. We'll stay in touch about when the installation process starts for your area.
+                  </p>
+                </div>
+                {(renewalState?.selectedPayments || 1) > 1 && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                    <p className="text-green-700">
+                      <strong>Future Payments:</strong> We'll automatically capture your remaining payments every 30
+                      days until your full contract amount is complete. No action required on your part.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
               <div className="space-y-4">
                 <div className="flex items-center justify-center gap-2 text-green-800 mb-4">
