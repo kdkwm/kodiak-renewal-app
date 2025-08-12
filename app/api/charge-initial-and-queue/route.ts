@@ -282,8 +282,7 @@ export async function POST(req: NextRequest) {
     const failures: any[] = []
 
     for (let i = 1; i <= futureCount; i++) {
-      // Schedule each remaining installment i days after today (1 day apart).
-      const due = addDays(startDate, i)
+      const due = addMonthsSafe(startDate, i)
 
       const payload = {
         amount: formatAmount(amount),
