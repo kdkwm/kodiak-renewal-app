@@ -12,7 +12,9 @@ type BillingData = {
 }
 
 function normalizeEmail(s: string) {
-  return String(s || "").trim().toLowerCase()
+  return String(s || "")
+    .trim()
+    .toLowerCase()
 }
 function onlyDigits(s: string) {
   return String(s || "").replace(/\D/g, "")
@@ -46,20 +48,35 @@ export async function POST(req: NextRequest) {
       scheduleStrategy, // "wordpress" | "none"
     } = await req.json()
 
-    // Sandbox credentials (prefer env vars in production)
-    const SANDBOX_MERCHANT_ID = "383613253"
-    const SANDBOX_PAYMENT_API_KEY = "0c3a403f7C0547008423f18063C00275"
-    const SANDBOX_PROFILES_API_KEY = "204B349135E149E9AD22A6D9D30AE0EE"
+    const MERCHANT_ID = process.env.BAMBORA_MERCHANT_ID || "383613253"
+    const PAYMENT_API_KEY = process.env.BAMBORA_PAYMENT_API_KEY || "0c3a403f7C0547008423f18063C00275"
+    const PROFILES_API_KEY = process.env.BAMBORA_PROFILES_API_KEY || "204B349135E149E9AD22A6D9D30AE0EE"
+
+    const isProduction = process.env.BAMBORA_MERCHANT_ID && process.env.BAMBORA_PAYMENT_API_KEY
+    const environment = isProduction ? "PRODUCTION" : "SANDBOX"
 
     if (!token) return NextResponse.json({ success: false, error: "Missing payment token" }, { status: 400 })
-    if (!amount || amount <= 0) return NextResponse.json({ success: false, error: "Invalid payment amount" }, { status: 400 })
+    if (!amount || amount <= 0)
+      return NextResponse.json({ success: false, error: "Invalid payment amount" }, { status: 400 })
 
     // Validate billing
-    const required = ["cardholder_name", "email", "phone", "address", "city", "state", "postal_code", "country"] as const
+    const required = [
+      "cardholder_name",
+      "email",
+      "phone",
+      "address",
+      "city",
+      "state",
+      "postal_code",
+      "country",
+    ] as const
     for (const f of required) {
       // @ts-ignore
       if (!billingData?.[f] || !String(billingData[f]).trim()) {
-        return NextResponse.json({ success: false, error: `Missing required field: ${String(f).replace("_", " ")}` }, { status: 400 })
+        return NextResponse.json(
+          { success: false, error: `Missing required field: ${String(f).replace("_", " ")}` },
+          { status: 400 },
+        )
       }
     }
 
@@ -67,20 +84,25 @@ export async function POST(req: NextRequest) {
     if (cleanPhone.length < 10) {
       return NextResponse.json({ success: false, error: "Phone number must be at least 10 digits" }, { status: 400 })
     }
-    const cleanPostal = String(billingData.postal_code || "").replace(/\s+/g, "").toUpperCase()
+    const cleanPostal = String(billingData.postal_code || "")
+      .replace(/\s+/g, "")
+      .toUpperCase()
     if (billingData.country === "CA" && !/^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(cleanPostal)) {
-      return NextResponse.json({ success: false, error: "Invalid Canadian postal code format (A1A1A1)" }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: "Invalid Canadian postal code format (A1A1A1)" },
+        { status: 400 },
+      )
     }
     const cleanEmail = normalizeEmail(billingData.email)
 
-    const paymentAuthHeader = `Passcode ${Buffer.from(`${SANDBOX_MERCHANT_ID}:${SANDBOX_PAYMENT_API_KEY}`).toString("base64")}`
-    const profileAuthHeader = `Passcode ${Buffer.from(`${SANDBOX_MERCHANT_ID}:${SANDBOX_PROFILES_API_KEY}`).toString("base64")}`
+    const paymentAuthHeader = `Passcode ${Buffer.from(`${MERCHANT_ID}:${PAYMENT_API_KEY}`).toString("base64")}`
+    const profileAuthHeader = `Passcode ${Buffer.from(`${MERCHANT_ID}:${PROFILES_API_KEY}`).toString("base64")}`
     const formattedAmount = formatAmount(amount)
 
     // One-time payment (no installments)
     if (!isRecurring) {
       const paymentData = {
-        amount: parseFloat(formattedAmount),
+        amount: Number.parseFloat(formattedAmount),
         payment_method: "token",
         token: { code: token, name: billingData.cardholder_name.trim() },
         complete: true,
@@ -105,7 +127,10 @@ export async function POST(req: NextRequest) {
       const result = await resp.json()
 
       if (!resp.ok || !isApprovedFlag(result.approved)) {
-        return NextResponse.json({ success: false, error: result.message || "Payment failed", details: result }, { status: 400 })
+        return NextResponse.json(
+          { success: false, error: result.message || "Payment failed", details: result },
+          { status: 400 },
+        )
       }
 
       // Auto-capture if sandbox still returns a PA with completion link
@@ -114,11 +139,16 @@ export async function POST(req: NextRequest) {
         await fetch(completeLink.href, {
           method: "POST",
           headers: { Authorization: paymentAuthHeader, "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: parseFloat(formattedAmount) }),
+          body: JSON.stringify({ amount: Number.parseFloat(formattedAmount) }),
         }).catch(() => null)
       }
 
-      return NextResponse.json({ success: true, transactionId: result.id, message: "Payment processed successfully" })
+      return NextResponse.json({
+        success: true,
+        transactionId: result.id,
+        message: "Payment processed successfully",
+        environment,
+      })
     }
 
     // Recurring installments: SAFE MODE
@@ -153,7 +183,7 @@ export async function POST(req: NextRequest) {
     if (profileResp.status === 402 && profileJson?.code === 17) {
       // Duplicate profile: charge first with token and stop (no scheduling here)
       const tokenPurchase = {
-        amount: parseFloat(formattedAmount),
+        amount: Number.parseFloat(formattedAmount),
         payment_method: "token",
         token: { code: token, name: billingData.cardholder_name.trim() },
         complete: true,
@@ -176,7 +206,10 @@ export async function POST(req: NextRequest) {
       })
       const firstJson = await firstResp.json()
       if (!firstResp.ok || !isApprovedFlag(firstJson.approved)) {
-        return NextResponse.json({ success: false, error: firstJson.message || "First payment failed", details: firstJson }, { status: 400 })
+        return NextResponse.json(
+          { success: false, error: firstJson.message || "First payment failed", details: firstJson },
+          { status: 400 },
+        )
       }
       return NextResponse.json({
         success: true,
@@ -186,13 +219,16 @@ export async function POST(req: NextRequest) {
         cardId: null,
         totalInstallments: 1,
         message: "First payment processed via token. Duplicate profile detected; future payments not auto‑scheduled.",
-        environment: "SANDBOX",
+        environment, // Use dynamic environment
         fallbackUsed: true,
       })
     }
 
     if (!profileResp.ok || profileJson?.code !== 1 || !profileJson?.customer_code) {
-      return NextResponse.json({ success: false, error: profileJson?.message || "Profile creation failed", details: profileJson }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: profileJson?.message || "Profile creation failed", details: profileJson },
+        { status: 400 },
+      )
     }
 
     const customerCode: string = profileJson.customer_code
@@ -211,16 +247,16 @@ export async function POST(req: NextRequest) {
       else if (Array.isArray(cardsJson.data)) cardsArray = cardsJson.data
       else if (cardsJson.card_id) cardsArray = [cardsJson]
     }
-    let cardId: number = 1
+    let cardId = 1
     if (cardsArray.length) {
       const raw = cardsArray[0].card_id
-      const parsed = typeof raw === "string" ? parseInt(raw, 10) : Number(raw)
+      const parsed = typeof raw === "string" ? Number.parseInt(raw, 10) : Number(raw)
       cardId = Number.isFinite(parsed) && parsed > 0 ? parsed : 1
     }
 
     // 3) Charge ONLY the first installment now using payment_profile purchase
     const firstPurchase = {
-      amount: parseFloat(formattedAmount),
+      amount: Number.parseFloat(formattedAmount),
       payment_method: "payment_profile",
       payment_profile: {
         customer_code: customerCode,
@@ -247,7 +283,10 @@ export async function POST(req: NextRequest) {
     })
     const firstJson = await firstResp.json()
     if (!firstResp.ok || !isApprovedFlag(firstJson.approved)) {
-      return NextResponse.json({ success: false, error: firstJson.message || "First payment failed", details: firstJson }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: firstJson.message || "First payment failed", details: firstJson },
+        { status: 400 },
+      )
     }
 
     // 4) Compute future installment dates (do NOT hit /v1/payments again here)
@@ -279,7 +318,7 @@ export async function POST(req: NextRequest) {
       for (const item of future) {
         try {
           const payload = {
-            amount: parseFloat(item.amount),
+            amount: Number.parseFloat(item.amount),
             currency: "CAD",
             payment_date: item.date, // YYYY-MM-DD
             customer_code: customerCode,
@@ -318,12 +357,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       firstTransactionId: firstJson.id,
-      message: remaining > 0
-        ? shouldQueueToWP
-          ? `First payment processed. ${remaining} future payments queued to WordPress.`
-          : `First payment processed. ${remaining} future payments computed but not scheduled (no WP queue configured).`
-        : "Single payment processed.",
-      environment: "SANDBOX",
+      message:
+        remaining > 0
+          ? shouldQueueToWP
+            ? `First payment processed. ${remaining} future payments queued to WordPress.`
+            : `First payment processed. ${remaining} future payments computed but not scheduled (no WP queue configured).`
+          : "Single payment processed.",
+      environment, // Use dynamic environment
       customerCode,
       cardId,
       totalInstallments,
