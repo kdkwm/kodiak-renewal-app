@@ -138,9 +138,24 @@ export async function POST(req: NextRequest) {
     const formattedAmount = formatAmount(amount)
 
     // Credentials
-    const MERCHANT_ID = process.env.BAMBORA_MERCHANT_ID || "383613253"
-    const PAYMENT_API_KEY = process.env.BAMBORA_PAYMENT_API_KEY || "0c3a403f7C0547008423f18063C00275"
-    const PROFILES_API_KEY = process.env.BAMBORA_PROFILES_API_KEY || "204B349135E149E9AD22A6D9D30AE0EE"
+    const MERCHANT_ID = process.env.BAMBORA_MERCHANT_ID
+    const PAYMENT_API_KEY = process.env.BAMBORA_PAYMENT_API_KEY
+    const PROFILES_API_KEY = process.env.BAMBORA_PROFILES_API_KEY
+
+    if (!MERCHANT_ID || !PAYMENT_API_KEY || !PROFILES_API_KEY) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing Bambora credentials in environment variables",
+          missing: {
+            merchantId: !MERCHANT_ID,
+            paymentApiKey: !PAYMENT_API_KEY,
+            profilesApiKey: !PROFILES_API_KEY,
+          },
+        },
+        { status: 500 },
+      )
+    }
 
     const paymentAuthHeader = `Passcode ${Buffer.from(`${MERCHANT_ID}:${PAYMENT_API_KEY}`).toString("base64")}`
     const profileAuthHeader = `Passcode ${Buffer.from(`${MERCHANT_ID}:${PROFILES_API_KEY}`).toString("base64")}`
