@@ -30,9 +30,21 @@ export function PaymentMethodStep({
 
   const [emailCopied, setEmailCopied] = useState(false)
 
-  useEffect(() => {
-    if (renewalState.selectedPaymentMethod === "credit") {
+  const scrollToTop = () => {
+    // Use multiple methods for better browser compatibility
+    window.scrollTo({ top: 0, behavior: "smooth" })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+
+    // Add a small delay to ensure content is rendered before scrolling
+    setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" })
+    }, 50)
+  }
+
+  useEffect(() => {
+    if (renewalState.selectedPaymentMethod === "credit" || renewalState.selectedPaymentMethod === "etransfer") {
+      scrollToTop()
     }
   }, [renewalState.selectedPaymentMethod])
 

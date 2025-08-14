@@ -150,12 +150,24 @@ export default function ContractRenewal() {
     }
   }, [renewalState, hasValidData])
 
+  const scrollToTop = () => {
+    // Use multiple methods for better browser compatibility
+    window.scrollTo({ top: 0, behavior: "smooth" })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+
+    // Add a small delay to ensure content is rendered before scrolling
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }, 50)
+  }
+
   const nextStep = () => {
     setRenewalState((prev) => {
       const next = Math.min(prev.currentStep + 1, steps.length)
       return { ...prev, currentStep: next }
     })
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    scrollToTop()
   }
 
   const prevStep = () => {
@@ -163,19 +175,19 @@ export default function ContractRenewal() {
       const prevStep = Math.max(prev.currentStep - 1, 1)
       return { ...prev, currentStep: prevStep }
     })
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    scrollToTop()
   }
 
   const goToStep = (step: number) => {
     setRenewalState((prev) => ({ ...prev, currentStep: step }))
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    scrollToTop()
   }
 
   const handlePaymentComplete = () => {
     setPaymentComplete(true)
     localStorage.removeItem("kodiak-contract-data")
     localStorage.removeItem("kodiak-renewal-state")
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    scrollToTop()
   }
 
   if (loading) {
