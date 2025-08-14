@@ -70,7 +70,7 @@ export function ReviewStep({ contractData, renewalState, setRenewalState, onNext
         {/* Cost Breakdown */}
         <div className="space-y-3">
           <div className="flex justify-between">
-            <span>Base Service</span>
+            <span>Subtotal</span>
             <span>${contractData.contractSubtotal.toFixed(2)}</span>
           </div>
 
@@ -80,11 +80,6 @@ export function ReviewStep({ contractData, renewalState, setRenewalState, onNext
               <span>${platinumUpgrade.toFixed(2)}</span>
             </div>
           )}
-
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
-          </div>
 
           <div className="flex justify-between">
             <span>HST (13%)</span>

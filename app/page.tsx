@@ -159,7 +159,12 @@ export default function ContractRenewal() {
     // Add a small delay to ensure content is rendered before scrolling
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" })
-    }, 50)
+      // Additional fallback for stubborn browsers
+      if (window.pageYOffset > 0) {
+        document.documentElement.scrollTop = 0
+        document.body.scrollTop = 0
+      }
+    }, 100)
   }
 
   const nextStep = () => {
@@ -206,7 +211,7 @@ export default function ContractRenewal() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-6">
         <div className="max-w-xl mx-auto bg-white border rounded-lg shadow p-6 text-center">
           <h2 className="text-xl font-semibold mb-2">Contract not found</h2>
-          <p className="text-slate-600">Please contact us for more details.</p>
+          <p className="text-slate-600">Make sure you click on the renewal link in your email</p>
         </div>
       </div>
     )

@@ -23,9 +23,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="theme-color" content="#f8fafc" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="msapplication-navbutton-color" content="#f8fafc" />
+        <meta name="theme-color" content="#dbeafe" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="light-content" />
+        <meta name="msapplication-navbutton-color" content="#dbeafe" />
       </head>
       <body className={inter.className}>{children}</body>
     </html>
