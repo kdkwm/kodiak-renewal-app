@@ -144,18 +144,19 @@ export function PaymentMethodStep({
                       <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
                         4
                       </div>
-                      <p className="text-sm">
-                        Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>
+                      <div className="text-sm">
+                        <p className="mb-2">
+                          Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>.
+                        </p>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="ml-2 h-6 px-2 text-xs bg-transparent"
+                          className="h-8 px-3 text-xs bg-transparent w-full sm:w-auto"
                           onClick={copyEmail}
                         >
                           {emailCopied ? "Copied!" : "Copy email"}
                         </Button>
-                        .
-                      </p>
+                      </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">

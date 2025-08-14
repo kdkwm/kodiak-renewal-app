@@ -387,12 +387,11 @@ export default function ContractRenewal() {
           <>
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-slate-800 mb-2">Kodiak Snow Removal</h1>
-              <p className="text-slate-600">Winter 2025/2026 Season Renewal</p>
 
               <div className="mt-4 p-4 bg-blue-100 rounded-lg border border-blue-200 max-w-2xl mx-auto">
                 <div className="flex items-center justify-center gap-2 text-blue-800">
                   <Home className="w-5 h-5" />
-                  <span className="font-medium">Renewing service for:</span>
+                  <span className="font-medium">Renewing 2025/26 service for:</span>
                 </div>
                 <p className="text-blue-700 font-semibold mt-1">{contractData.serviceAddress}</p>
                 {contractData.isPlatinum && (

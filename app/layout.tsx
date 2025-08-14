@@ -12,7 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Kodiak Snow Removal - Contract Renewal",
   description: "Renew your snow removal contract for the 2025/2026 season",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -22,6 +22,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="theme-color" content="#f8fafc" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="msapplication-navbutton-color" content="#f8fafc" />
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   )
