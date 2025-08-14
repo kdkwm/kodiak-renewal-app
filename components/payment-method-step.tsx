@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { CreditCard, ArrowLeft, Mail } from "lucide-react"
 import { BamboraPayment } from "./bambora-payment"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface PaymentMethodStepProps {
   contractData: any
@@ -29,6 +29,12 @@ export function PaymentMethodStep({
   const paymentAmount = Math.round((total / (renewalState?.selectedPayments || 1)) * 100) / 100
 
   const [emailCopied, setEmailCopied] = useState(false)
+
+  useEffect(() => {
+    if (renewalState.selectedPaymentMethod === "credit") {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }, [renewalState.selectedPaymentMethod])
 
   if (renewalState.selectedPaymentMethod === "credit") {
     return (
