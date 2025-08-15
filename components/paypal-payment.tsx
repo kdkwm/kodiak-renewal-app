@@ -44,15 +44,23 @@ export function PayPalPayment({
     script.async = true
 
     script.onload = () => {
-      if (window.paypal) {
-        initializePayPal()
+      const checkContainer = () => {
+        const container = document.getElementById("paypal-button-container")
+        if (container && window.paypal) {
+          initializePayPal()
+        } else {
+          setTimeout(checkContainer, 100)
+        }
       }
+      checkContainer()
     }
 
     document.body.appendChild(script)
 
     return () => {
-      document.body.removeChild(script)
+      if (document.body.contains(script)) {
+        document.body.removeChild(script)
+      }
     }
   }, [])
 
