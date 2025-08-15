@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, ArrowRight, ArrowLeft } from "lucide-react"
+import { Calendar, ArrowLeft, CreditCard, Mail } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 
 interface PaymentScheduleStepProps {
@@ -29,21 +29,25 @@ export function PaymentScheduleStep({
   const subtotal = contractData.contractSubtotal + platinumUpgrade
   const total = Math.round(subtotal * 1.13 * 100) / 100
 
-  // No preselection: keep UI selection separate from underlying value
   const [mainChoice, setMainChoice] = useState<"full" | "installments" | null>(null)
   const [showInstallments, setShowInstallments] = useState(false)
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false)
   const installmentSectionRef = useRef<HTMLDivElement>(null)
+  const paymentMethodRef = useRef<HTMLDivElement>(null)
+
+  const isKSB = contractData.company === "KSB"
 
   const selectMain = (type: "full" | "installments") => {
     setMainChoice(type)
+    setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: null }))
+
     if (type === "full") {
       setRenewalState((prev: any) => ({ ...prev, selectedPayments: 1 }))
       setShowInstallments(false)
     } else {
       setShowInstallments(true)
-      // Do NOT auto-select a count; user must choose 2/3/4 etc.
-      // Keep previous selectedPayments until user clicks a count.
     }
+    setShowPaymentMethods(true)
   }
 
   // Auto-scroll to installment section when it becomes visible
@@ -58,8 +62,24 @@ export function PaymentScheduleStep({
     }
   }, [showInstallments])
 
+  useEffect(() => {
+    if (showPaymentMethods && paymentMethodRef.current) {
+      setTimeout(() => {
+        paymentMethodRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        })
+      }, 200)
+    }
+  }, [showPaymentMethods])
+
   const handleInstallmentChoice = (payments: number) => {
     setRenewalState((prev: any) => ({ ...prev, selectedPayments: payments }))
+  }
+
+  const handlePaymentMethodSelect = (method: string) => {
+    setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: method }))
+    onNext() // Advance to payment step
   }
 
   const generatePaymentSchedule = (numPayments: number) => {
@@ -91,7 +111,7 @@ export function PaymentScheduleStep({
           <CardDescription>Select your preferred payment option</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Main Payment Options - no preselection */}
+          {/* Main Payment Options */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               type="button"
@@ -126,7 +146,7 @@ export function PaymentScheduleStep({
             </button>
           </div>
 
-          {/* Installment Options - only when user chose installments */}
+          {/* Installment Options */}
           {showInstallments && (
             <div ref={installmentSectionRef} className="space-y-4 border-t pt-6">
               <div className="text-center">
@@ -190,6 +210,73 @@ export function PaymentScheduleStep({
             </div>
           )}
 
+          {showPaymentMethods && (
+            <div ref={paymentMethodRef} className="border-t pt-6">
+              <Card className="bg-slate-50">
+                <CardHeader className="text-center pb-4">
+                  <CardTitle className="text-lg">Choose Payment Method</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* eTransfer Option */}
+                    <button
+                      type="button"
+                      className="w-full p-6 h-auto rounded-lg border-2 border-slate-200 bg-white text-slate-800 hover:bg-blue-50 hover:border-blue-300 transition text-left"
+                      onClick={() => handlePaymentMethodSelect("etransfer")}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Mail className="w-6 h-6 text-blue-600" />
+                        <div>
+                          <div className="font-semibold text-lg text-blue-700">Interac e-Transfer</div>
+                          <div className="text-blue-700/80 text-sm">Send payment via email transfer</div>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Credit Card or PayPal Option */}
+                    {isKSB ? (
+                      <button
+                        type="button"
+                        className="w-full p-6 h-auto rounded-lg border-2 border-slate-200 bg-white text-slate-800 hover:bg-blue-50 hover:border-blue-300 transition text-left"
+                        onClick={() => handlePaymentMethodSelect("paypal")}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 bg-blue-600 text-white rounded text-xs font-bold flex items-center justify-center">
+                            PP
+                          </div>
+                          <div>
+                            <div className="font-semibold text-lg text-blue-700">PayPal</div>
+                            <div className="text-blue-700/80 text-sm">Pay securely with PayPal</div>
+                          </div>
+                        </div>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="w-full p-6 h-auto rounded-lg border-2 border-slate-200 bg-white text-slate-800 hover:bg-green-50 hover:border-green-300 transition text-left"
+                        onClick={() => handlePaymentMethodSelect("credit")}
+                      >
+                        <div className="flex items-center gap-3">
+                          <CreditCard className="w-6 h-6 text-green-600" />
+                          <div>
+                            <div className="font-semibold text-lg text-green-700">Credit Card</div>
+                            <div className="text-green-700/80 text-sm">Pay securely with your credit card</div>
+                          </div>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="text-center mt-4 text-xs text-slate-500">
+                    Secure payments processed by {isKSB ? "PayPal" : "Bambora"}
+                    <br />
+                    Your payment information is encrypted and secure
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex justify-between pt-4">
             {showBackButton ? (
@@ -200,10 +287,6 @@ export function PaymentScheduleStep({
             ) : (
               <div />
             )}
-            <Button size="lg" onClick={onNext} className="bg-emerald-600 hover:bg-emerald-700" disabled={!mainChoice}>
-              Continue
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
           </div>
         </CardContent>
       </Card>
