@@ -80,37 +80,19 @@ export function PayPalPayment({
     const initializeCardFields = () => {
       const paypal = (window as any).paypal
 
-      console.log("[v0] Initializing PayPal CardFields")
-      console.log("[v0] PayPal object:", paypal)
-      console.log("[v0] CardFields available:", !!paypal?.CardFields)
-
-      if (!paypal || !paypal.CardFields) {
-        setError("PayPal CardFields not available")
+      if (!cardNumberRef.current || !cardExpiryRef.current || !cardCvvRef.current) {
+        setTimeout(initializeCardFields, 100)
         return
       }
 
-      let isEligible = true
-      try {
-        if (typeof paypal.CardFields.isEligible === "function") {
-          isEligible = paypal.CardFields.isEligible()
-          console.log("[v0] CardFields eligible:", isEligible)
-        } else {
-          console.log("[v0] isEligible method not available, proceeding anyway")
-        }
-      } catch (error) {
-        console.log("[v0] Error checking eligibility:", error)
-        // Continue anyway - some accounts might not have this method
-      }
-
-      if (!isEligible) {
-        setError("PayPal CardFields not supported for this account")
+      if (!paypal?.CardFields) {
+        setError("PayPal CardFields not available")
         return
       }
 
       try {
         cardFieldsRef.current = paypal.CardFields({
           createOrder: async () => {
-            console.log("[v0] Creating PayPal order")
             const response = await fetch("/api/paypal/create-order", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -121,11 +103,9 @@ export function PayPalPayment({
               }),
             })
             const orderData = await response.json()
-            console.log("[v0] Order created:", orderData.orderID)
             return orderData.orderID
           },
           onApprove: async (data: any) => {
-            console.log("[v0] Payment approved:", data.orderID)
             setProcessing(true)
             try {
               const response = await fetch("/api/paypal/capture-order", {
@@ -145,36 +125,28 @@ export function PayPalPayment({
                 throw new Error(result.error || "Payment failed")
               }
             } catch (error) {
-              console.error("[v0] Payment capture error:", error)
               setError("Payment failed")
             } finally {
               setProcessing(false)
             }
           },
           onError: (error: any) => {
-            console.error("[v0] PayPal error:", error)
             setError("Payment processing error")
             setProcessing(false)
           },
         })
 
-        if (cardNumberRef.current && cardExpiryRef.current && cardCvvRef.current) {
-          cardFieldsRef.current.NumberField().render(cardNumberRef.current)
-          cardFieldsRef.current.ExpiryField().render(cardExpiryRef.current)
-          cardFieldsRef.current.CVVField().render(cardCvvRef.current)
+        cardFieldsRef.current.NumberField().render(cardNumberRef.current)
+        cardFieldsRef.current.ExpiryField().render(cardExpiryRef.current)
+        cardFieldsRef.current.CVVField().render(cardCvvRef.current)
 
-          console.log("[v0] CardFields rendered successfully")
-          setCardFieldsReady(true)
-        } else {
-          throw new Error("Card field containers not ready")
-        }
+        setCardFieldsReady(true)
       } catch (error) {
-        console.error("[v0] CardFields initialization error:", error)
         setError("Failed to initialize payment form")
       }
     }
 
-    setTimeout(initializeCardFields, 1000)
+    initializeCardFields()
   }, [paypalLoaded, paymentAmount, contractData, renewalState, billingData])
 
   const handleSubmit = async (e: React.FormEvent) => {
