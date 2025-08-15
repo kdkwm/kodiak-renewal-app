@@ -42,7 +42,7 @@ export function PayPalPayment({
   const CLIENT_ID = "AV0TyYPKe1QH6uYUKMdNoDhjvVPO_zyg1PyM9o4iJMe5JJW6vaRHbk6NYo_6iYn5dwEhr5zsGbkNG1qzc"
 
   const initialOptions = {
-    "client-id": CLIENT_ID,
+    clientId: CLIENT_ID,
     currency: "CAD",
     intent: "capture",
     components: "buttons,card-fields",
