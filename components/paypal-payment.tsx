@@ -26,8 +26,13 @@ export function PayPalPayment({
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sdkLoaded, setSdkLoaded] = useState(false)
 
   const cardFieldsRef = useRef<any>(null)
+  const numberFieldRef = useRef<HTMLDivElement>(null)
+  const expiryFieldRef = useRef<HTMLDivElement>(null)
+  const cvvFieldRef = useRef<HTMLDivElement>(null)
+
   const [billingData, setBillingData] = useState({
     cardholder_name: contractData?.customer_name || "",
     address: contractData?.address || "",
@@ -35,128 +40,21 @@ export function PayPalPayment({
     postal_code: contractData?.postal_code || "",
   })
 
+  // Load PayPal SDK
   useEffect(() => {
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
-    console.log("[v0] PayPal Client ID:", clientId ? "Available" : "Missing")
-
     if (!clientId) {
       setError("PayPal configuration missing")
       return
     }
 
-    // Load PayPal SDK
     const script = document.createElement("script")
     script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=card-fields&currency=CAD`
     script.onload = () => {
-      console.log("[v0] PayPal SDK loaded successfully")
-
-      let attempts = 0
-      const maxAttempts = 100 // 10 seconds max (100ms * 100)
-
-      const waitForElements = () => {
-        attempts++
-        const numberEl = document.getElementById("card-number-field")
-        const expiryEl = document.getElementById("card-expiry-field")
-        const cvvEl = document.getElementById("card-cvv-field")
-
-        console.log(`[v0] Attempt ${attempts}: DOM elements ready:`, {
-          number: !!numberEl,
-          expiry: !!expiryEl,
-          cvv: !!cvvEl,
-        })
-
-        if (numberEl && expiryEl && cvvEl) {
-          console.log("[v0] All DOM elements ready, initializing PayPal")
-          initializePayPal()
-        } else if (attempts >= maxAttempts) {
-          console.error("[v0] Timeout: DOM elements never became ready after 10 seconds")
-          setError("Card field containers not ready - timeout")
-          setLoading(false)
-        } else {
-          // Retry every 100ms until elements are ready
-          setTimeout(waitForElements, 100)
-        }
-      }
-
-      const initializePayPal = () => {
-        const paypal = (window as any).paypal
-        console.log("[v0] PayPal object:", paypal ? "Available" : "Missing")
-        console.log("[v0] CardFields available:", !!paypal?.CardFields)
-
-        if (!paypal?.CardFields) {
-          setError("PayPal CardFields not available")
-          return
-        }
-
-        try {
-          console.log("[v0] Creating PayPal CardFields...")
-          cardFieldsRef.current = paypal.CardFields({
-            createOrder: async () => {
-              console.log("[v0] Creating PayPal order...")
-              const response = await fetch("/api/paypal/create-order", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  amount: paymentAmount,
-                  contractData: contractData,
-                }),
-              })
-              const data = await response.json()
-              console.log("[v0] Order created:", data.orderID)
-              return data.orderID
-            },
-            onApprove: async (data: any) => {
-              console.log("[v0] Payment approved, capturing...")
-              setProcessing(true)
-              try {
-                const response = await fetch("/api/paypal/capture-order", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    orderID: data.orderID,
-                    contractData: contractData,
-                    renewalState: renewalState,
-                  }),
-                })
-                const result = await response.json()
-                console.log("[v0] Capture result:", result)
-                if (result.success) {
-                  onPaymentComplete?.()
-                } else {
-                  setError("Payment failed")
-                }
-              } catch (error) {
-                console.error("[v0] Payment processing error:", error)
-                setError("Payment processing failed")
-              }
-              setProcessing(false)
-            },
-            onError: (error: any) => {
-              console.error("[v0] PayPal error:", error)
-              setError("Payment error occurred")
-              setProcessing(false)
-            },
-          })
-
-          // Render card fields
-          console.log("[v0] Rendering card fields...")
-          cardFieldsRef.current.NumberField().render("#card-number-field")
-          cardFieldsRef.current.ExpiryField().render("#card-expiry-field")
-          cardFieldsRef.current.CVVField().render("#card-cvv-field")
-
-          console.log("[v0] PayPal CardFields initialized successfully")
-          setLoading(false)
-        } catch (error) {
-          console.error("[v0] CardFields initialization error:", error)
-          setError("Failed to initialize payment form")
-        }
-      }
-
-      // Start waiting for DOM elements
-      waitForElements()
+      console.log("[v0] PayPal SDK loaded")
+      setSdkLoaded(true)
     }
     script.onerror = () => {
-      console.error("[v0] Failed to load PayPal SDK")
       setError("Failed to load PayPal")
     }
     document.head.appendChild(script)
@@ -168,11 +66,89 @@ export function PayPalPayment({
     }
   }, [])
 
+  // Initialize PayPal CardFields after SDK loads and DOM is ready
+  useEffect(() => {
+    if (!sdkLoaded) return
+
+    const initializePayPal = () => {
+      if (!numberFieldRef.current || !expiryFieldRef.current || !cvvFieldRef.current) {
+        console.log("[v0] DOM elements not ready, retrying...")
+        setTimeout(initializePayPal, 100)
+        return
+      }
+
+      const paypal = (window as any).paypal
+      if (!paypal?.CardFields) {
+        setError("PayPal CardFields not available")
+        return
+      }
+
+      try {
+        console.log("[v0] Initializing PayPal CardFields...")
+        cardFieldsRef.current = paypal.CardFields({
+          createOrder: async () => {
+            const response = await fetch("/api/paypal/create-order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                amount: paymentAmount,
+                contractData: contractData,
+              }),
+            })
+            const data = await response.json()
+            return data.orderID
+          },
+          onApprove: async (data: any) => {
+            setProcessing(true)
+            try {
+              const response = await fetch("/api/paypal/capture-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  orderID: data.orderID,
+                  contractData: contractData,
+                  renewalState: renewalState,
+                }),
+              })
+              const result = await response.json()
+              if (result.success) {
+                onPaymentComplete?.()
+              } else {
+                setError("Payment failed")
+              }
+            } catch (error) {
+              setError("Payment processing failed")
+            }
+            setProcessing(false)
+          },
+          onError: (error: any) => {
+            console.error("[v0] PayPal error:", error)
+            setError("Payment error occurred")
+            setProcessing(false)
+          },
+        })
+
+        // Render card fields using refs
+        cardFieldsRef.current.NumberField().render(numberFieldRef.current)
+        cardFieldsRef.current.ExpiryField().render(expiryFieldRef.current)
+        cardFieldsRef.current.CVVField().render(cvvFieldRef.current)
+
+        console.log("[v0] PayPal CardFields initialized successfully")
+        setLoading(false)
+      } catch (error) {
+        console.error("[v0] CardFields initialization error:", error)
+        setError("Failed to initialize payment form")
+      }
+    }
+
+    // Start initialization after a brief delay to ensure DOM is ready
+    setTimeout(initializePayPal, 100)
+  }, [sdkLoaded, paymentAmount, contractData, renewalState, onPaymentComplete])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!cardFieldsRef.current || processing) return
 
-    console.log("[v0] Submitting PayPal payment...")
     setProcessing(true)
     try {
       await cardFieldsRef.current.submit({
@@ -295,26 +271,20 @@ export function PayPalPayment({
             <div className="space-y-4">
               <div>
                 <Label>Card Number *</Label>
-                <div
-                  id="card-number-field"
-                  className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
-                ></div>
+                <div ref={numberFieldRef} className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Expiry (MM/YY) *</Label>
                   <div
-                    id="card-expiry-field"
+                    ref={expiryFieldRef}
                     className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
                   ></div>
                 </div>
                 <div>
                   <Label>CVV *</Label>
-                  <div
-                    id="card-cvv-field"
-                    className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
-                  ></div>
+                  <div ref={cvvFieldRef} className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"></div>
                 </div>
               </div>
             </div>
