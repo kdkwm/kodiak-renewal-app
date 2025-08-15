@@ -59,6 +59,78 @@ export function PaymentMethodStep({
     }
   }, [renewalState.selectedPaymentMethod])
 
+  if (!renewalState.selectedPaymentMethod) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="mb-6 flex justify-center">
+            <Button size="lg" variant="outline" onClick={onPrev} className="bg-white h-12">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </div>
+
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Choose Payment Method</CardTitle>
+              <CardDescription>Select how you'd like to pay for your renewal</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button
+                  className="p-6 border-2 border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 text-left"
+                  onClick={() => setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: "etransfer" }))}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <Mail className="w-6 h-6 text-blue-600" />
+                    <div className="font-semibold text-lg text-blue-700">Interac e-Transfer</div>
+                  </div>
+                  <div className="text-blue-700/80 text-sm">Send payment via email transfer</div>
+                </button>
+
+                {isKSB ? (
+                  <button
+                    className="p-6 border-2 border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 text-left"
+                    onClick={() => setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: "paypal" }))}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">PP</span>
+                      </div>
+                      <div className="font-semibold text-lg text-blue-700">PayPal</div>
+                    </div>
+                    <div className="text-blue-700/80 text-sm">Pay securely with PayPal</div>
+                  </button>
+                ) : (
+                  <button
+                    className="p-6 border-2 border-slate-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-all duration-200 text-left"
+                    onClick={() => setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: "credit" }))}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">💳</span>
+                      </div>
+                      <div className="font-semibold text-lg text-green-700">Credit Card</div>
+                    </div>
+                    <div className="text-green-700/80 text-sm">Pay securely with your credit card</div>
+                  </button>
+                )}
+              </div>
+
+              <div className="text-center text-sm text-slate-600 pt-4">
+                <div className="flex items-center justify-center gap-2">
+                  <span>🔒</span>
+                  <span>Secure payments processed by {isKSB ? "PayPal" : "Bambora"}</span>
+                </div>
+                <div className="text-xs mt-1">Your payment information is encrypted and secure</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   if (renewalState.selectedPaymentMethod === "paypal" && isKSB) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
