@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Calendar, ArrowRight, ArrowLeft } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
-import { PaymentMethodSection } from "./payment-method-step"
 
 interface PaymentScheduleStepProps {
   contractData: any
@@ -14,7 +13,6 @@ interface PaymentScheduleStepProps {
   onPrev: () => void
   showBackButton?: boolean
   onPaymentComplete?: () => void
-  showPaymentMethod?: boolean
 }
 
 export function PaymentScheduleStep({
@@ -25,7 +23,6 @@ export function PaymentScheduleStep({
   onPrev,
   showBackButton = true,
   onPaymentComplete,
-  showPaymentMethod = false,
 }: PaymentScheduleStepProps) {
   const platinumUpgrade =
     !contractData.isPlatinum && renewalState?.platinumService ? (contractData.isWalkway ? 250 : 150) : 0
@@ -193,18 +190,6 @@ export function PaymentScheduleStep({
             </div>
           )}
 
-          {showPaymentMethod && mainChoice && (
-            <div className="border-t pt-6">
-              <PaymentMethodSection
-                contractData={contractData}
-                renewalState={renewalState}
-                setRenewalState={setRenewalState}
-                onPaymentComplete={onPaymentComplete}
-                showAsSelection={true}
-              />
-            </div>
-          )}
-
           {/* Navigation */}
           <div className="flex justify-between pt-4">
             {showBackButton ? (
@@ -215,12 +200,10 @@ export function PaymentScheduleStep({
             ) : (
               <div />
             )}
-            {!showPaymentMethod && (
-              <Button size="lg" onClick={onNext} className="bg-emerald-600 hover:bg-emerald-700" disabled={!mainChoice}>
-                Continue
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
+            <Button size="lg" onClick={onNext} className="bg-emerald-600 hover:bg-emerald-700" disabled={!mainChoice}>
+              Continue
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </div>
         </CardContent>
       </Card>
