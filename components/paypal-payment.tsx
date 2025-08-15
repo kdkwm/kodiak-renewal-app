@@ -88,66 +88,62 @@ export function PayPalPayment({
     const initializePayPal = () => {
       const paypal = (window as any).paypal
 
-      if (paypal.CardFields.isEligible()) {
-        const cardField = paypal.CardFields({
-          createOrder: createOrderCallback,
-          onApprove: onApproveCallback,
-          style: {
-            ".valid": { color: "green" },
-            ".invalid": { color: "red" },
-            input: {
-              "font-size": "16px",
-              "font-family": "courier, monospace",
-              "font-weight": "lighter",
-              color: "#ccc",
-            },
+      const cardField = paypal.CardFields({
+        createOrder: createOrderCallback,
+        onApprove: onApproveCallback,
+        style: {
+          ".valid": { color: "green" },
+          ".invalid": { color: "red" },
+          input: {
+            "font-size": "16px",
+            "font-family": "courier, monospace",
+            "font-weight": "lighter",
+            color: "#ccc",
           },
+        },
+      })
+
+      if (cardField.NameField().isEligible()) {
+        cardField.NameField().render("#cardholder-name-field")
+      }
+
+      if (cardField.NumberField().isEligible()) {
+        cardField.NumberField().render("#card-number-field")
+      }
+
+      if (cardField.ExpiryField().isEligible()) {
+        cardField.ExpiryField().render("#expiry-field")
+      }
+
+      if (cardField.CVVField().isEligible()) {
+        cardField.CVVField().render("#cvv-field")
+      }
+
+      setLoading(false)
+
+      const form = document.querySelector("#card-form")
+      if (form) {
+        form.addEventListener("submit", async (event: any) => {
+          event.preventDefault()
+          setProcessing(true)
+
+          try {
+            const data = await cardField.submit({
+              billingAddress: {
+                addressLine1: billingData.address,
+                locality: billingData.city,
+                region: "ON",
+                postalCode: billingData.postal_code,
+                countryCodeAlpha2: "CA",
+              },
+            })
+
+            return await onApproveCallback(data)
+          } catch (error) {
+            setError("Payment could not be processed")
+            setProcessing(false)
+          }
         })
-
-        if (cardField.NameField().isEligible()) {
-          cardField.NameField().render("#cardholder-name-field")
-        }
-
-        if (cardField.NumberField().isEligible()) {
-          cardField.NumberField().render("#card-number-field")
-        }
-
-        if (cardField.ExpiryField().isEligible()) {
-          cardField.ExpiryField().render("#expiry-field")
-        }
-
-        if (cardField.CVVField().isEligible()) {
-          cardField.CVVField().render("#cvv-field")
-        }
-
-        setLoading(false)
-
-        const form = document.querySelector("#card-form")
-        if (form) {
-          form.addEventListener("submit", async (event: any) => {
-            event.preventDefault()
-            setProcessing(true)
-
-            try {
-              const data = await cardField.submit({
-                billingAddress: {
-                  addressLine1: billingData.address,
-                  locality: billingData.city,
-                  region: "ON",
-                  postalCode: billingData.postal_code,
-                  countryCodeAlpha2: "CA",
-                },
-              })
-
-              return await onApproveCallback(data)
-            } catch (error) {
-              setError("Payment could not be processed")
-              setProcessing(false)
-            }
-          })
-        }
-      } else {
-        setError("PayPal CardFields not available for this account")
       }
     }
 
