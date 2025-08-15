@@ -81,10 +81,22 @@ export function PayPalPayment({
 
   useEffect(() => {
     if (paypalLoaded && !initializationRef.current) {
-      // Wait for DOM elements to be ready
-      setTimeout(() => {
-        initializePayPal()
-      }, 500)
+      const checkDOMReady = () => {
+        const numberField = document.getElementById("card-number-field")
+        const expiryField = document.getElementById("card-expiry-field")
+        const cvvField = document.getElementById("card-cvv-field")
+
+        if (numberField && expiryField && cvvField) {
+          console.log("[v0] DOM elements ready, initializing PayPal")
+          initializePayPal()
+        } else {
+          console.log("[v0] DOM elements not ready, retrying in 100ms...")
+          setTimeout(checkDOMReady, 100)
+        }
+      }
+
+      // Start checking after a small delay to ensure component is mounted
+      setTimeout(checkDOMReady, 100)
     }
   }, [paypalLoaded])
 
@@ -96,6 +108,7 @@ export function PayPalPayment({
 
     if (!(window as any).paypal) {
       console.error("[v0] PayPal SDK not available")
+      setError("PayPal SDK not loaded")
       return
     }
 
@@ -104,10 +117,8 @@ export function PayPalPayment({
     const cvvField = document.getElementById("card-cvv-field")
 
     if (!numberField || !expiryField || !cvvField) {
-      console.log("[v0] DOM elements not ready, retrying...")
-      setTimeout(() => {
-        initializePayPal()
-      }, 200)
+      console.error("[v0] DOM elements still not ready after multiple retries")
+      setError("Payment form initialization failed")
       return
     }
 
@@ -115,80 +126,88 @@ export function PayPalPayment({
     initializationRef.current = true
     const paypal = (window as any).paypal
 
-    if (paypal.CardFields && paypal.CardFields.isEligible()) {
-      console.log("[v0] PayPal CardFields is eligible")
+    try {
+      if (paypal.CardFields && paypal.CardFields.isEligible()) {
+        console.log("[v0] PayPal CardFields is eligible")
 
-      cardFieldsRef.current = paypal.CardFields({
-        createOrder: async () => {
-          try {
-            console.log("[v0] Creating PayPal order")
-            const response = await fetch("/api/paypal/create-order", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                amount: paymentAmount,
-                contractData: contractData,
-                isRecurring: isRecurring,
-              }),
-            })
+        cardFieldsRef.current = paypal.CardFields({
+          createOrder: async () => {
+            try {
+              console.log("[v0] Creating PayPal order")
+              const response = await fetch("/api/paypal/create-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  amount: paymentAmount,
+                  contractData: contractData,
+                  isRecurring: isRecurring,
+                }),
+              })
 
-            const orderData = await response.json()
-            console.log("[v0] Order created:", orderData.orderID)
-            return orderData.orderID
-          } catch (error) {
-            console.error("[v0] Failed to create order:", error)
-            throw error
-          }
-        },
-        onApprove: async (data: any) => {
-          setProcessing(true)
-          try {
-            console.log("[v0] Capturing PayPal order:", data.orderID)
-            const response = await fetch("/api/paypal/capture-order", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                orderID: data.orderID,
-                contractData: contractData,
-                renewalState: renewalState,
-                billingData: billingData,
-              }),
-            })
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`)
+              }
 
-            const result = await response.json()
-
-            if (result.success) {
-              console.log("[v0] Payment successful")
-              onPaymentComplete?.()
-            } else {
-              throw new Error(result.error)
+              const orderData = await response.json()
+              console.log("[v0] Order created:", orderData.orderID)
+              return orderData.orderID
+            } catch (error) {
+              console.error("[v0] Failed to create order:", error)
+              throw error
             }
-          } catch (error) {
-            console.error("[v0] Payment confirmation failed:", error)
-            setError("Payment confirmation failed")
-          } finally {
-            setProcessing(false)
-          }
-        },
-        onError: (err: any) => {
-          console.error("[v0] PayPal CardFields error:", err)
-          setError("Payment processing error")
-          setProcessing(false)
-        },
-        style: {
-          input: {
-            "font-size": "16px",
-            "font-family": "system-ui, -apple-system, sans-serif",
-            color: "#374151",
-            "background-color": "white",
           },
-          ".invalid": {
-            color: "#ef4444",
-          },
-        },
-      })
+          onApprove: async (data: any) => {
+            setProcessing(true)
+            try {
+              console.log("[v0] Capturing PayPal order:", data.orderID)
+              const response = await fetch("/api/paypal/capture-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  orderID: data.orderID,
+                  contractData: contractData,
+                  renewalState: renewalState,
+                  billingData: billingData,
+                }),
+              })
 
-      try {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`)
+              }
+
+              const result = await response.json()
+
+              if (result.success) {
+                console.log("[v0] Payment successful")
+                onPaymentComplete?.()
+              } else {
+                throw new Error(result.error || "Payment failed")
+              }
+            } catch (error) {
+              console.error("[v0] Payment confirmation failed:", error)
+              setError("Payment confirmation failed")
+            } finally {
+              setProcessing(false)
+            }
+          },
+          onError: (err: any) => {
+            console.error("[v0] PayPal CardFields error:", err)
+            setError("Payment processing error")
+            setProcessing(false)
+          },
+          style: {
+            input: {
+              "font-size": "16px",
+              "font-family": "system-ui, -apple-system, sans-serif",
+              color: "#374151",
+              "background-color": "white",
+            },
+            ".invalid": {
+              color: "#ef4444",
+            },
+          },
+        })
+
         console.log("[v0] Rendering card number field")
         cardFieldsRef.current.NumberField().render("#card-number-field")
 
@@ -200,13 +219,14 @@ export function PayPalPayment({
 
         console.log("[v0] All CardFields rendered successfully")
         setCardFieldsReady(true)
-      } catch (error) {
-        console.error("[v0] Failed to render CardFields:", error)
-        setError("Failed to initialize payment form")
+      } else {
+        console.error("[v0] PayPal CardFields not eligible")
+        setError("PayPal CardFields not available for your region")
       }
-    } else {
-      console.error("[v0] PayPal CardFields not eligible")
-      setError("PayPal CardFields not available for your region")
+    } catch (error) {
+      console.error("[v0] Failed to initialize PayPal CardFields:", error)
+      setError("Failed to initialize payment form")
+      initializationRef.current = false
     }
   }
 
