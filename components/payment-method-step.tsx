@@ -4,8 +4,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Mail } from "lucide-react"
 import { BamboraPayment } from "./bambora-payment"
-import { PayPalPayment } from "./paypal-payment"
+import dynamic from "next/dynamic"
 import { useState, useEffect } from "react"
+
+const PayPalPayment = dynamic(() => import("./paypal-payment").then((mod) => ({ default: mod.PayPalPayment })), {
+  ssr: false,
+  loading: () => (
+    <Card className="max-w-2xl mx-auto">
+      <CardContent className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading PayPal payment form...</p>
+        </div>
+      </CardContent>
+    </Card>
+  ),
+})
 
 interface PaymentMethodStepProps {
   contractData: any
