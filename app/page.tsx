@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react"
 import { Home, CheckCircle } from "lucide-react"
 import { ServiceLevelStep } from "../components/service-level-step"
 import { PaymentScheduleStep } from "../components/payment-schedule-step"
-import { PaymentMethodStep } from "../components/payment-method-step"
 import { ReviewStep } from "../components/review-step"
 
 type Company = "KSR" | "KSB"
@@ -53,16 +52,14 @@ export default function ContractRenewal() {
     () => (isPlatinum: boolean, company: Company) => {
       if (isPlatinum || company === "KSB") {
         return [
-          { id: 1, title: "Payment Schedule", description: "Select payment options" },
-          { id: 2, title: "Review Contract", description: "Review your selections" },
-          { id: 3, title: "Payment Method", description: "Complete your payment" },
+          { id: 1, title: "Review Contract", description: "Review your contract details" },
+          { id: 2, title: "Payment & Checkout", description: "Select payment schedule and complete payment" },
         ]
       } else {
         return [
           { id: 1, title: "Service Level", description: "Choose your service level" },
-          { id: 2, title: "Payment Schedule", description: "Select payment options" },
-          { id: 3, title: "Review Contract", description: "Review your selections" },
-          { id: 4, title: "Payment Method", description: "Complete your payment" },
+          { id: 2, title: "Review Contract", description: "Review your contract details" },
+          { id: 3, title: "Payment & Checkout", description: "Select payment schedule and complete payment" },
         ]
       }
     },
@@ -302,7 +299,7 @@ export default function ContractRenewal() {
       switch (renewalState.currentStep) {
         case 1:
           return (
-            <PaymentScheduleStep
+            <ReviewStep
               contractData={contractData}
               renewalState={renewalState}
               setRenewalState={setRenewalState}
@@ -313,22 +310,15 @@ export default function ContractRenewal() {
           )
         case 2:
           return (
-            <ReviewStep
+            <PaymentScheduleStep
               contractData={contractData}
               renewalState={renewalState}
               setRenewalState={setRenewalState}
               onNext={nextStep}
               onPrev={prevStep}
-            />
-          )
-        case 3:
-          return (
-            <PaymentMethodStep
-              contractData={contractData}
-              renewalState={renewalState}
-              setRenewalState={setRenewalState}
-              onPrev={prevStep}
+              showBackButton={true}
               onPaymentComplete={handlePaymentComplete}
+              showPaymentMethod={true}
             />
           )
         default:
@@ -347,7 +337,7 @@ export default function ContractRenewal() {
           )
         case 2:
           return (
-            <PaymentScheduleStep
+            <ReviewStep
               contractData={contractData}
               renewalState={renewalState}
               setRenewalState={setRenewalState}
@@ -358,22 +348,15 @@ export default function ContractRenewal() {
           )
         case 3:
           return (
-            <ReviewStep
+            <PaymentScheduleStep
               contractData={contractData}
               renewalState={renewalState}
               setRenewalState={setRenewalState}
               onNext={nextStep}
               onPrev={prevStep}
-            />
-          )
-        case 4:
-          return (
-            <PaymentMethodStep
-              contractData={contractData}
-              renewalState={renewalState}
-              setRenewalState={setRenewalState}
-              onPrev={prevStep}
+              showBackButton={true}
               onPaymentComplete={handlePaymentComplete}
+              showPaymentMethod={true}
             />
           )
         default:
