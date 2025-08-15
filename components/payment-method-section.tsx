@@ -194,6 +194,15 @@ export function PaymentMethodSection({
           <CardDescription>Follow these steps to complete your payment</CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
+          {onBack && (
+            <div className="flex justify-center">
+              <Button size="lg" variant="outline" onClick={onBack} className="bg-transparent">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            </div>
+          )}
+
           <div className="space-y-8">
             <div>
               <h3 className="font-semibold text-lg mb-6">One-Time Payment</h3>
@@ -316,15 +325,6 @@ export function PaymentMethodSection({
               )}
             </div>
           </div>
-
-          {onBack && (
-            <div className="flex justify-center pt-4">
-              <Button size="lg" variant="outline" onClick={onBack} className="bg-transparent">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
     )
