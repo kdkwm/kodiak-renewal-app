@@ -37,6 +37,7 @@ export function PayPalPayment({
 
   useEffect(() => {
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
+    console.log("[v0] PayPal Client ID:", clientId)
     if (!clientId) {
       setError("PayPal configuration missing")
       return
@@ -46,17 +47,34 @@ export function PayPalPayment({
     const script = document.createElement("script")
     script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=card-fields&currency=CAD`
     script.onload = () => {
+      console.log("[v0] PayPal SDK loaded")
       // Wait a moment for DOM to be ready, then initialize
       setTimeout(() => {
         const paypal = (window as any).paypal
+        console.log("[v0] PayPal object:", paypal)
+        console.log("[v0] CardFields available:", !!paypal?.CardFields)
+
         if (!paypal?.CardFields) {
           setError("PayPal CardFields not available")
           return
         }
 
+        // Check if DOM elements exist
+        const numberEl = document.getElementById("card-number-field")
+        const expiryEl = document.getElementById("card-expiry-field")
+        const cvvEl = document.getElementById("card-cvv-field")
+        console.log("[v0] DOM elements ready:", !!numberEl, !!expiryEl, !!cvvEl)
+
+        if (!numberEl || !expiryEl || !cvvEl) {
+          setError("Card field containers not ready")
+          return
+        }
+
         try {
+          console.log("[v0] Initializing CardFields...")
           cardFieldsRef.current = paypal.CardFields({
             createOrder: async () => {
+              console.log("[v0] Creating PayPal order...")
               const response = await fetch("/api/paypal/create-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -66,9 +84,11 @@ export function PayPalPayment({
                 }),
               })
               const data = await response.json()
+              console.log("[v0] Order created:", data.orderID)
               return data.orderID
             },
             onApprove: async (data: any) => {
+              console.log("[v0] Payment approved:", data.orderID)
               setProcessing(true)
               try {
                 const response = await fetch("/api/paypal/capture-order", {
@@ -87,28 +107,36 @@ export function PayPalPayment({
                   setError("Payment failed")
                 }
               } catch (error) {
+                console.error("[v0] Payment processing error:", error)
                 setError("Payment processing failed")
               }
               setProcessing(false)
             },
-            onError: () => {
+            onError: (error: any) => {
+              console.error("[v0] PayPal error:", error)
               setError("Payment error occurred")
               setProcessing(false)
             },
           })
 
+          console.log("[v0] Rendering card fields...")
           // Render card fields
           cardFieldsRef.current.NumberField().render("#card-number-field")
           cardFieldsRef.current.ExpiryField().render("#card-expiry-field")
           cardFieldsRef.current.CVVField().render("#card-cvv-field")
 
+          console.log("[v0] PayPal CardFields initialized successfully")
           setLoading(false)
         } catch (error) {
+          console.error("[v0] CardFields initialization error:", error)
           setError("Failed to initialize payment form")
         }
       }, 500)
     }
-    script.onerror = () => setError("Failed to load PayPal")
+    script.onerror = () => {
+      console.error("[v0] Failed to load PayPal SDK")
+      setError("Failed to load PayPal")
+    }
     document.head.appendChild(script)
 
     return () => {
