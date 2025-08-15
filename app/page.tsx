@@ -83,8 +83,6 @@ export default function ContractRenewal() {
 
     const isPlatinum = parseBool(q.get("isPlatinum") || q.get("platinum"), false)
     const isWalkway = parseBool(q.get("isWalkway") || q.get("walkway"), false)
-    const payments = Math.max(1, Math.min(12, parseNumber(q.get("payments"), 1)))
-    const method = (q.get("method") as RenewalState["selectedPaymentMethod"]) || ""
 
     const hasQueryParams = address.length > 0 && Number.isFinite(subtotal) && subtotal >= 0 && contractId.length > 0
 
@@ -100,9 +98,9 @@ export default function ContractRenewal() {
 
       const initialRenewalState: RenewalState = {
         platinumService: false,
-        selectedPayments: payments,
-        selectedPaymentMethod: method || "",
-        currentStep: isPlatinum ? 1 : 1,
+        selectedPayments: 1,
+        selectedPaymentMethod: "",
+        currentStep: isPlatinum || company === "KSB" ? 1 : 1,
       }
 
       setContractData(data)
@@ -111,22 +109,27 @@ export default function ContractRenewal() {
       setRenewalState(initialRenewalState)
 
       localStorage.setItem("kodiak-contract-data", JSON.stringify(data))
-      localStorage.setItem("kodiak-renewal-state", JSON.stringify(initialRenewalState))
+      localStorage.removeItem("kodiak-renewal-state")
 
       if (url.search) {
         window.history.replaceState(null, "", url.pathname)
       }
     } else {
       const savedContractData = localStorage.getItem("kodiak-contract-data")
-      const savedRenewalState = localStorage.getItem("kodiak-renewal-state")
 
-      if (savedContractData && savedRenewalState) {
+      if (savedContractData) {
         try {
           const contractData = JSON.parse(savedContractData)
-          const renewalState = JSON.parse(savedRenewalState)
+
+          const freshRenewalState: RenewalState = {
+            platinumService: false,
+            selectedPayments: 1,
+            selectedPaymentMethod: "",
+            currentStep: contractData.isPlatinum || contractData.company === "KSB" ? 1 : 1,
+          }
 
           setContractData(contractData)
-          setRenewalState(renewalState)
+          setRenewalState(freshRenewalState)
           setHasValidData(true)
           setSteps(getSteps(contractData.isPlatinum, contractData.company))
         } catch (e) {
@@ -143,12 +146,6 @@ export default function ContractRenewal() {
 
     setLoading(false)
   }, [getSteps])
-
-  useEffect(() => {
-    if (hasValidData && renewalState) {
-      localStorage.setItem("kodiak-renewal-state", JSON.stringify(renewalState))
-    }
-  }, [renewalState, hasValidData])
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" })
@@ -397,7 +394,7 @@ export default function ContractRenewal() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {renewalState.currentStep !== steps.length && renewalState.currentStep !== steps.length - 1 && (
+        {renewalState.currentStep !== steps.length && (
           <>
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-slate-800 mb-2">Kodiak Snow Removal</h1>
