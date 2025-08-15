@@ -1,18 +1,16 @@
 "use client"
 import { useState } from "react"
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+
 import {
   PayPalScriptProvider,
   PayPalButtons,
   PayPalCardFieldsProvider,
-  PayPalNameField,
-  PayPalNumberField,
-  PayPalExpiryField,
-  PayPalCVVField,
+  PayPalCardFieldsForm,
   usePayPalCardFields,
 } from "@paypal/react-paypal-js"
 
@@ -24,44 +22,6 @@ interface PayPalPaymentProps {
   onBack?: () => void
 }
 
-// <CHANGE> Custom submit component using PayPal React SDK hook
-function SubmitPayment({ 
-  billingAddress, 
-  onPaymentComplete 
-}: { 
-  billingAddress: any
-  onPaymentComplete?: () => void 
-}) {
-  const { cardFieldsForm } = usePayPalCardFields()
-
-  const handleSubmit = async () => {
-    if (!cardFieldsForm) {
-      alert("Card fields not available")
-      return
-    }
-
-    try {
-      const formState = await cardFieldsForm.getState()
-      if (!formState.isFormValid) {
-        alert("Please fill in all required fields")
-        return
-      }
-
-      await cardFieldsForm.submit({ billingAddress })
-      onPaymentComplete?.()
-    } catch (err) {
-      console.error("Card payment failed:", err)
-      alert("Payment failed. Please try again.")
-    }
-  }
-
-  return (
-    <Button onClick={handleSubmit} className="w-full" size="lg">
-      Pay with Card
-    </Button>
-  )
-}
-
 export function PayPalPayment({
   contractData,
   renewalState,
@@ -70,17 +30,32 @@ export function PayPalPayment({
   onBack,
 }: PayPalPaymentProps) {
   const [billingAddress, setBillingAddress] = useState({
-    addressLine1: "",
-    adminArea2: "",
-    adminArea1: "",
-    postalCode: "",
+    addressLine1: contractData.address || "",
+    addressLine2: "",
+    adminArea1: "ON", // Province
+    adminArea2: "", // City
     countryCode: "CA",
+    postalCode: "",
   })
+  const [message, setMessage] = useState("")
 
   const CLIENT_ID = "AV0TyYPKe1QH6uYUKMdNoDhjvVPO_zyg1PyM9o4iJMe5JJW6vaRHbk6NYo_6iYn5dwEhr5zsGbkNG1qzc"
 
-  // <CHANGE> PayPal order creation function
-  const createOrder = async () => {
+  const initialOptions = {
+    "client-id": CLIENT_ID,
+    currency: "CAD",
+    intent: "capture",
+    components: "buttons,card-fields",
+  }
+
+  function handleBillingAddressChange(field: string, value: string) {
+    setBillingAddress((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
+  async function createOrder() {
     try {
       const response = await fetch("/api/paypal/create-order", {
         method: "POST",
@@ -88,20 +63,30 @@ export function PayPalPayment({
         body: JSON.stringify({
           amount: paymentAmount,
           contractData: contractData,
+          renewalState: renewalState,
         }),
       })
+
       const orderData = await response.json()
-      return orderData.id
+
+      if (orderData.id) {
+        return orderData.id
+      } else {
+        const errorDetail = orderData?.details?.[0]
+        const errorMessage = errorDetail
+          ? `${errorDetail.issue} ${errorDetail.description} (${orderData.debug_id})`
+          : JSON.stringify(orderData)
+        throw new Error(errorMessage)
+      }
     } catch (error) {
       console.error(error)
-      throw new Error(`Could not initiate PayPal Checkout...${error}`)
+      return `Could not initiate PayPal Checkout...${error}`
     }
   }
 
-  // <CHANGE> PayPal order approval function
-  const onApprove = async (data: any) => {
+  async function onApprove(data: any) {
     try {
-      const response = await fetch("/api/paypal/capture-order", {
+      const response = await fetch(`/api/paypal/capture-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -110,21 +95,36 @@ export function PayPalPayment({
           renewalState: renewalState,
         }),
       })
-      const result = await response.json()
-      if (result.success) {
+
+      const orderData = await response.json()
+      const transaction =
+        orderData?.purchase_units?.[0]?.payments?.captures?.[0] ||
+        orderData?.purchase_units?.[0]?.payments?.authorizations?.[0]
+      const errorDetail = orderData?.details?.[0]
+
+      if (errorDetail || !transaction || transaction.status === "DECLINED") {
+        let errorMessage
+        if (transaction) {
+          errorMessage = `Transaction ${transaction.status}: ${transaction.id}`
+        } else if (errorDetail) {
+          errorMessage = `${errorDetail.description} (${orderData.debug_id})`
+        } else {
+          errorMessage = JSON.stringify(orderData)
+        }
+        throw new Error(errorMessage)
+      } else {
+        console.log("Capture result", orderData, JSON.stringify(orderData, null, 2))
         onPaymentComplete?.()
+        return `Transaction ${transaction.status}: ${transaction.id}`
       }
-      return result
     } catch (error) {
-      throw new Error(`Sorry, your transaction could not be processed...${error}`)
+      return `Sorry, your transaction could not be processed...${error}`
     }
   }
 
-  const handleBillingAddressChange = (field: string, value: string) => {
-    setBillingAddress((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
+  function onError(error: any) {
+    console.error("PayPal error:", error)
+    setMessage("Payment failed. Please try again.")
   }
 
   return (
@@ -136,15 +136,7 @@ export function PayPalPayment({
         </Button>
       </div>
 
-      {/* <CHANGE> PayPal React SDK Provider with proper configuration */}
-      <PayPalScriptProvider
-        options={{
-          clientId: CLIENT_ID,
-          currency: "CAD",
-          intent: "capture",
-          components: "buttons,card-fields",
-        }}
-      >
+      <PayPalScriptProvider options={initialOptions}>
         <Card className="max-w-2xl mx-auto">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl flex items-center justify-center gap-2">
@@ -153,140 +145,89 @@ export function PayPalPayment({
             </CardTitle>
             <CardDescription>One-time payment of ${paymentAmount.toFixed(2)} CAD</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* <CHANGE> PayPal Buttons using React SDK */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Pay with PayPal</h3>
-                <PayPalButtons
-                  createOrder={createOrder}
-                  onApprove={onApprove}
-                  onError={(error) => {
-                    console.error("PayPal error:", error)
-                    alert("Payment failed. Please try again.")
-                  }}
-                  style={{
-                    shape: "rect",
-                    layout: "vertical",
-                    color: "gold",
-                    label: "paypal",
-                  }}
-                />
-              </div>
+          <CardContent className="space-y-6">
+            {/* PayPal Buttons for modal payment */}
+            <div>
+              <h3 className="font-semibold mb-3">Pay with PayPal</h3>
+              <PayPalButtons
+                createOrder={createOrder}
+                onApprove={async (data) => setMessage(await onApprove(data))}
+                onError={onError}
+                style={{
+                  shape: "rect",
+                  layout: "vertical",
+                  color: "gold",
+                  label: "paypal",
+                }}
+              />
+            </div>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-muted-foreground">Or pay with card</span>
-                </div>
-              </div>
+            <div className="text-center text-sm text-gray-500">OR PAY WITH CARD</div>
 
-              {/* <CHANGE> PayPal Card Fields using React SDK */}
+            {/* PayPal Card Fields for inline payment */}
+            <div>
+              <h3 className="font-semibold mb-3">Pay with Card</h3>
               <PayPalCardFieldsProvider
                 createOrder={createOrder}
-                onApprove={onApprove}
-                onError={(error) => {
-                  console.error("PayPal card error:", error)
-                  alert("Payment failed. Please try again.")
-                }}
-                style={{
-                  input: {
-                    "font-size": "16px",
-                    "font-family": "system-ui, sans-serif",
-                    color: "#374151",
-                  },
-                  ".invalid": {
-                    color: "#ef4444",
-                  },
-                }}
+                onApprove={async (data) => setMessage(await onApprove(data))}
               >
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="paypal-name-field">Cardholder Name</Label>
-                    <div className="mt-1 border rounded-md p-3 min-h-[48px]">
-                      <PayPalNameField />
-                    </div>
-                  </div>
+                <PayPalCardFieldsForm />
 
-                  <div>
-                    <Label htmlFor="paypal-number-field">Card Number</Label>
-                    <div className="mt-1 border rounded-md p-3 min-h-[48px]">
-                      <PayPalNumberField />
-                    </div>
-                  </div>
-
+                {/* Billing Address Fields */}
+                <div className="mt-4 space-y-4">
+                  <h4 className="font-medium">Billing Address</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="paypal-expiry-field">Expiry Date</Label>
-                      <div className="mt-1 border rounded-md p-3 min-h-[48px]">
-                        <PayPalExpiryField />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="paypal-cvv-field">CVV</Label>
-                      <div className="mt-1 border rounded-md p-3 min-h-[48px]">
-                        <PayPalCVVField />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Billing Address</h4>
-
-                    <div>
-                      <Label htmlFor="address">Address</Label>
+                      <Label htmlFor="address1">Address Line 1</Label>
                       <Input
-                        id="address"
-                        placeholder="123 Main Street"
+                        id="address1"
                         value={billingAddress.addressLine1}
                         onChange={(e) => handleBillingAddressChange("addressLine1", e.target.value)}
+                        placeholder="Street address"
                       />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="city">City</Label>
-                        <Input
-                          id="city"
-                          placeholder="Toronto"
-                          value={billingAddress.adminArea2}
-                          onChange={(e) => handleBillingAddressChange("adminArea2", e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="province">Province</Label>
-                        <Input
-                          id="province"
-                          placeholder="ON"
-                          value={billingAddress.adminArea1}
-                          onChange={(e) => handleBillingAddressChange("adminArea1", e.target.value)}
-                        />
-                      </div>
-                    </div>
-
                     <div>
-                      <Label htmlFor="postal-code">Postal Code</Label>
+                      <Label htmlFor="address2">Address Line 2</Label>
                       <Input
-                        id="postal-code"
-                        placeholder="K1A 0A6"
+                        id="address2"
+                        value={billingAddress.addressLine2}
+                        onChange={(e) => handleBillingAddressChange("addressLine2", e.target.value)}
+                        placeholder="Apt, suite, etc."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
+                        value={billingAddress.adminArea2}
+                        onChange={(e) => handleBillingAddressChange("adminArea2", e.target.value)}
+                        placeholder="City"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="postal">Postal Code</Label>
+                      <Input
+                        id="postal"
                         value={billingAddress.postalCode}
                         onChange={(e) => handleBillingAddressChange("postalCode", e.target.value)}
+                        placeholder="Postal code"
                       />
                     </div>
                   </div>
-
-                  {/* <CHANGE> Submit component using PayPal React SDK hook */}
-                  <SubmitPayment 
-                    billingAddress={billingAddress} 
-                    onPaymentComplete={onPaymentComplete}
-                  />
                 </div>
+
+                {/* Custom Submit Button */}
+                <SubmitPayment billingAddress={billingAddress} />
               </PayPalCardFieldsProvider>
             </div>
 
-            <div className="text-center text-sm text-slate-500 mt-6">
+            {message && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">{message}</p>
+              </div>
+            )}
+
+            <div className="text-center text-sm text-slate-500">
               <div className="flex items-center justify-center gap-2">
                 <span>🔒</span>
                 <span>Secure payments processed by PayPal</span>
@@ -296,5 +237,42 @@ export function PayPalPayment({
         </Card>
       </PayPalScriptProvider>
     </div>
+  )
+}
+
+const SubmitPayment = ({ billingAddress }: { billingAddress: any }) => {
+  const [isPaying, setIsPaying] = useState(false)
+  const { cardFieldsForm } = usePayPalCardFields()
+
+  const handleClick = async () => {
+    if (!cardFieldsForm) {
+      const childErrorMessage = "Unable to find any child components in the <PayPalCardFieldsProvider />"
+      throw new Error(childErrorMessage)
+    }
+
+    const formState = await cardFieldsForm.getState()
+
+    if (!formState.isFormValid) {
+      return alert("The payment form is invalid")
+    }
+
+    setIsPaying(true)
+
+    cardFieldsForm.submit({ billingAddress }).finally(() => {
+      setIsPaying(false)
+    })
+  }
+
+  return (
+    <Button onClick={handleClick} disabled={isPaying} className="w-full mt-4" size="lg">
+      {isPaying ? (
+        <>
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+          Processing...
+        </>
+      ) : (
+        "Pay Now"
+      )}
+    </Button>
   )
 }
