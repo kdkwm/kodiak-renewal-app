@@ -50,8 +50,8 @@ export default function ContractRenewal() {
   const [paymentComplete, setPaymentComplete] = useState(false)
 
   const getSteps = useMemo(
-    () => (isPlatinum: boolean) => {
-      if (isPlatinum) {
+    () => (isPlatinum: boolean, company: Company) => {
+      if (isPlatinum || company === "KSB") {
         return [
           { id: 1, title: "Payment Schedule", description: "Select payment options" },
           { id: 2, title: "Review Contract", description: "Review your selections" },
@@ -69,7 +69,7 @@ export default function ContractRenewal() {
     [],
   )
 
-  const [steps, setSteps] = useState(getSteps(false))
+  const [steps, setSteps] = useState(getSteps(false, "KSR"))
 
   useEffect(() => {
     const url = new URL(window.location.href)
@@ -107,7 +107,7 @@ export default function ContractRenewal() {
 
       setContractData(data)
       setHasValidData(true)
-      setSteps(getSteps(isPlatinum))
+      setSteps(getSteps(isPlatinum, company))
       setRenewalState(initialRenewalState)
 
       localStorage.setItem("kodiak-contract-data", JSON.stringify(data))
@@ -128,7 +128,7 @@ export default function ContractRenewal() {
           setContractData(contractData)
           setRenewalState(renewalState)
           setHasValidData(true)
-          setSteps(getSteps(contractData.isPlatinum))
+          setSteps(getSteps(contractData.isPlatinum, contractData.company))
         } catch (e) {
           localStorage.removeItem("kodiak-contract-data")
           localStorage.removeItem("kodiak-renewal-state")
@@ -151,15 +151,12 @@ export default function ContractRenewal() {
   }, [renewalState, hasValidData])
 
   const scrollToTop = () => {
-    // Use multiple methods for better browser compatibility
     window.scrollTo({ top: 0, behavior: "smooth" })
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
 
-    // Add a small delay to ensure content is rendered before scrolling
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" })
-      // Additional fallback for stubborn browsers
       if (window.pageYOffset > 0) {
         document.documentElement.scrollTop = 0
         document.body.scrollTop = 0
@@ -301,7 +298,7 @@ export default function ContractRenewal() {
   }
 
   const renderCurrentStep = () => {
-    if (contractData.isPlatinum) {
+    if (contractData.isPlatinum || contractData.company === "KSB") {
       switch (renewalState.currentStep) {
         case 1:
           return (

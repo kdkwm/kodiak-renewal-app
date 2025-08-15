@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { CreditCard, ArrowLeft, Mail } from "lucide-react"
 import { BamboraPayment } from "./bambora-payment"
+import { PayPalPayment } from "./paypal-payment"
 import { useState, useEffect } from "react"
 
 interface PaymentMethodStepProps {
@@ -30,6 +31,8 @@ export function PaymentMethodStep({
 
   const [emailCopied, setEmailCopied] = useState(false)
 
+  const isKSB = contractData.company === "KSB"
+
   const scrollToTop = () => {
     // Use multiple methods for better browser compatibility
     window.scrollTo({ top: 0, behavior: "smooth" })
@@ -43,10 +46,36 @@ export function PaymentMethodStep({
   }
 
   useEffect(() => {
-    if (renewalState.selectedPaymentMethod === "credit" || renewalState.selectedPaymentMethod === "etransfer") {
+    if (
+      renewalState.selectedPaymentMethod === "credit" ||
+      renewalState.selectedPaymentMethod === "etransfer" ||
+      renewalState.selectedPaymentMethod === "paypal"
+    ) {
       scrollToTop()
     }
   }, [renewalState.selectedPaymentMethod])
+
+  if (renewalState.selectedPaymentMethod === "paypal" && isKSB) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="mb-6 flex justify-center">
+            <Button size="lg" variant="outline" onClick={onPrev} className="bg-white h-12">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </div>
+          <PayPalPayment
+            contractData={contractData}
+            renewalState={renewalState}
+            paymentAmount={paymentAmount}
+            onPaymentComplete={onPaymentComplete}
+            onBack={onPrev}
+          />
+        </div>
+      </div>
+    )
+  }
 
   if (renewalState.selectedPaymentMethod === "credit") {
     return (
@@ -247,7 +276,6 @@ export function PaymentMethodStep({
     )
   }
 
-  // This shouldn't happen, but fallback to payment method selection
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader className="text-center">
@@ -273,19 +301,42 @@ export function PaymentMethodStep({
             </div>
           </button>
 
-          <button
-            type="button"
-            className="w-full p-6 h-auto rounded-lg border-2 text-left transition hover:bg-green-50 border-slate-200"
-            onClick={() => setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: "credit" }))}
-          >
-            <div className="flex items-start gap-3">
-              <CreditCard className="w-6 h-6 text-green-600 mt-1" />
-              <div>
-                <div className="font-semibold text-lg text-green-700">Credit Card</div>
-                <div className="text-green-700/80 text-sm">Pay securely with your credit card</div>
+          {isKSB ? (
+            <button
+              type="button"
+              className="w-full p-6 h-auto rounded-lg border-2 text-left transition hover:bg-blue-50 border-slate-200"
+              onClick={() => setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: "paypal" }))}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 mt-1">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-blue-600">
+                    <path
+                      fill="currentColor"
+                      d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.26-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.75.75 0 0 0-.741.63l-1.398 8.864a.641.641 0 0 0 .633.74h4.606a.75.75 0 0 0 .741-.63l.131-.828.997-6.314.064-.386a.75.75 0 0 1 .741-.63h.466c3.632 0 6.469-1.472 7.29-5.729.343-1.775.156-3.263-.545-4.314a2.83 2.83 0 0 0-.609-.323z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <div className="font-semibold text-lg text-blue-700">PayPal</div>
+                  <div className="text-blue-700/80 text-sm">Pay securely with PayPal</div>
+                </div>
               </div>
-            </div>
-          </button>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="w-full p-6 h-auto rounded-lg border-2 text-left transition hover:bg-green-50 border-slate-200"
+              onClick={() => setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: "credit" }))}
+            >
+              <div className="flex items-start gap-3">
+                <CreditCard className="w-6 h-6 text-green-600 mt-1" />
+                <div>
+                  <div className="font-semibold text-lg text-green-700">Credit Card</div>
+                  <div className="text-green-700/80 text-sm">Pay securely with your credit card</div>
+                </div>
+              </div>
+            </button>
+          )}
         </div>
 
         <div className="flex justify-start pt-4">
