@@ -5,6 +5,7 @@ import { Home, CheckCircle } from "lucide-react"
 import { ServiceLevelStep } from "../components/service-level-step"
 import { PaymentScheduleStep } from "../components/payment-schedule-step"
 import { ReviewStep } from "../components/review-step"
+import { PaymentMethodSection } from "../components/payment-method-section"
 
 type Company = "KSR" | "KSB"
 
@@ -20,7 +21,7 @@ interface ContractData {
 interface RenewalState {
   platinumService: boolean
   selectedPayments: number
-  selectedPaymentMethod: "etransfer" | "credit" | ""
+  selectedPaymentMethod: "etransfer" | "credit" | "paypal" | ""
   currentStep: number
 }
 
@@ -54,12 +55,14 @@ export default function ContractRenewal() {
         return [
           { id: 1, title: "Review Contract", description: "Review your contract details" },
           { id: 2, title: "Payment & Checkout", description: "Select payment schedule and complete payment" },
+          { id: 3, title: "Payment", description: "Complete your payment" },
         ]
       } else {
         return [
           { id: 1, title: "Service Level", description: "Choose your service level" },
           { id: 2, title: "Review Contract", description: "Review your contract details" },
           { id: 3, title: "Payment & Checkout", description: "Select payment schedule and complete payment" },
+          { id: 4, title: "Payment", description: "Complete your payment" },
         ]
       }
     },
@@ -321,6 +324,19 @@ export default function ContractRenewal() {
               showPaymentMethod={true}
             />
           )
+        case 3:
+          return (
+            <div className="max-w-2xl mx-auto">
+              <PaymentMethodSection
+                contractData={contractData}
+                renewalState={renewalState}
+                setRenewalState={setRenewalState}
+                onPaymentComplete={handlePaymentComplete}
+                onBack={prevStep}
+                showAsSelection={false}
+              />
+            </div>
+          )
         default:
           return null
       }
@@ -359,6 +375,19 @@ export default function ContractRenewal() {
               showPaymentMethod={true}
             />
           )
+        case 4:
+          return (
+            <div className="max-w-2xl mx-auto">
+              <PaymentMethodSection
+                contractData={contractData}
+                renewalState={renewalState}
+                setRenewalState={setRenewalState}
+                onPaymentComplete={handlePaymentComplete}
+                onBack={prevStep}
+                showAsSelection={false}
+              />
+            </div>
+          )
         default:
           return null
       }
@@ -368,7 +397,7 @@ export default function ContractRenewal() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {renewalState.currentStep !== steps.length && (
+        {renewalState.currentStep !== steps.length && renewalState.currentStep !== steps.length - 1 && (
           <>
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-slate-800 mb-2">Kodiak Snow Removal</h1>
@@ -391,7 +420,7 @@ export default function ContractRenewal() {
 
             <div className="mb-8">
               <div className="flex items-center justify-center mb-6 px-4">
-                {steps.map((step, index) => {
+                {steps.slice(0, -1).map((step, index) => {
                   const isActive = renewalState.currentStep === step.id
                   const isCompleted = renewalState.currentStep > step.id
 
@@ -409,7 +438,7 @@ export default function ContractRenewal() {
                       >
                         {step.id}
                       </div>
-                      {index < steps.length - 1 && (
+                      {index < steps.length - 2 && (
                         <div
                           className={`w-8 sm:w-14 h-0.5 mx-1 sm:mx-2 ${isCompleted ? "bg-green-500" : "bg-slate-300"}`}
                         />

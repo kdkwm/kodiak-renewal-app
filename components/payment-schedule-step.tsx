@@ -36,7 +36,6 @@ export function PaymentScheduleStep({
   const [mainChoice, setMainChoice] = useState<"full" | "installments" | null>(null)
   const [showInstallments, setShowInstallments] = useState(false)
   const installmentSectionRef = useRef<HTMLDivElement>(null)
-  const [showPaymentSection, setShowPaymentSection] = useState(false)
 
   const selectMain = (type: "full" | "installments") => {
     setMainChoice(type)
@@ -83,21 +82,6 @@ export function PaymentScheduleStep({
   }
 
   const lowestMonthlyPayment = Math.round((total / 4) * 100) / 100
-
-  const handleContinue = () => {
-    if (showPaymentMethod && (renewalState?.selectedPayments || 1) >= 1) {
-      setShowPaymentSection(true)
-      // Scroll to payment section
-      setTimeout(() => {
-        const paymentSection = document.getElementById("payment-method-section")
-        if (paymentSection) {
-          paymentSection.scrollIntoView({ behavior: "smooth", block: "start" })
-        }
-      }, 100)
-    } else {
-      onNext()
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -209,6 +193,18 @@ export function PaymentScheduleStep({
             </div>
           )}
 
+          {showPaymentMethod && mainChoice && (
+            <div className="border-t pt-6">
+              <PaymentMethodSection
+                contractData={contractData}
+                renewalState={renewalState}
+                setRenewalState={setRenewalState}
+                onPaymentComplete={onPaymentComplete}
+                showAsSelection={true}
+              />
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex justify-between pt-4">
             {showBackButton ? (
@@ -219,31 +215,15 @@ export function PaymentScheduleStep({
             ) : (
               <div />
             )}
-            <Button
-              size="lg"
-              onClick={handleContinue}
-              className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={!mainChoice}
-            >
-              {showPaymentMethod ? "Continue to Payment" : "Continue"}
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            {!showPaymentMethod && (
+              <Button size="lg" onClick={onNext} className="bg-emerald-600 hover:bg-emerald-700" disabled={!mainChoice}>
+                Continue
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
-
-      {/* Integrated Payment Method Section */}
-      {showPaymentMethod && showPaymentSection && (
-        <div id="payment-method-section">
-          <PaymentMethodSection
-            contractData={contractData}
-            renewalState={renewalState}
-            setRenewalState={setRenewalState}
-            onPaymentComplete={onPaymentComplete}
-            onBack={() => setShowPaymentSection(false)}
-          />
-        </div>
-      )}
     </div>
   )
 }
