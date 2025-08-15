@@ -27,13 +27,12 @@ export function PayPalPayment({
   const [paypalLoaded, setPaypalLoaded] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cardFieldsReady, setCardFieldsReady] = useState(false)
   const cardFieldsRef = useRef<any>(null)
   const initializationRef = useRef(false)
 
   const [billingData, setBillingData] = useState({
     cardholder_name: contractData?.customer_name || "",
-    email_address: contractData?.email || "",
-    phone_number: contractData?.phone || "",
     address: contractData?.address || "",
     city: contractData?.city || "",
     postal_code: contractData?.postal_code || "",
@@ -58,9 +57,6 @@ export function PayPalPayment({
     if ((window as any).paypal) {
       console.log("[v0] PayPal SDK already loaded")
       setPaypalLoaded(true)
-      setTimeout(() => {
-        initializePayPal()
-      }, 100)
       return
     }
 
@@ -69,9 +65,6 @@ export function PayPalPayment({
     script.onload = () => {
       console.log("[v0] PayPal SDK loaded successfully")
       setPaypalLoaded(true)
-      setTimeout(() => {
-        initializePayPal()
-      }, 200)
     }
     script.onerror = () => {
       console.error("[v0] Failed to load PayPal SDK")
@@ -86,6 +79,15 @@ export function PayPalPayment({
     }
   }, [])
 
+  useEffect(() => {
+    if (paypalLoaded && !initializationRef.current) {
+      // Wait for DOM elements to be ready
+      setTimeout(() => {
+        initializePayPal()
+      }, 500)
+    }
+  }, [paypalLoaded])
+
   const initializePayPal = () => {
     if (initializationRef.current) {
       console.log("[v0] PayPal already initialized")
@@ -94,9 +96,18 @@ export function PayPalPayment({
 
     if (!(window as any).paypal) {
       console.error("[v0] PayPal SDK not available")
+      return
+    }
+
+    const numberField = document.getElementById("card-number-field")
+    const expiryField = document.getElementById("card-expiry-field")
+    const cvvField = document.getElementById("card-cvv-field")
+
+    if (!numberField || !expiryField || !cvvField) {
+      console.log("[v0] DOM elements not ready, retrying...")
       setTimeout(() => {
         initializePayPal()
-      }, 500)
+      }, 200)
       return
     }
 
@@ -105,9 +116,12 @@ export function PayPalPayment({
     const paypal = (window as any).paypal
 
     if (paypal.CardFields && paypal.CardFields.isEligible()) {
+      console.log("[v0] PayPal CardFields is eligible")
+
       cardFieldsRef.current = paypal.CardFields({
         createOrder: async () => {
           try {
+            console.log("[v0] Creating PayPal order")
             const response = await fetch("/api/paypal/create-order", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -119,6 +133,7 @@ export function PayPalPayment({
             })
 
             const orderData = await response.json()
+            console.log("[v0] Order created:", orderData.orderID)
             return orderData.orderID
           } catch (error) {
             console.error("[v0] Failed to create order:", error)
@@ -128,6 +143,7 @@ export function PayPalPayment({
         onApprove: async (data: any) => {
           setProcessing(true)
           try {
+            console.log("[v0] Capturing PayPal order:", data.orderID)
             const response = await fetch("/api/paypal/capture-order", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -142,6 +158,7 @@ export function PayPalPayment({
             const result = await response.json()
 
             if (result.success) {
+              console.log("[v0] Payment successful")
               onPaymentComplete?.()
             } else {
               throw new Error(result.error)
@@ -163,6 +180,7 @@ export function PayPalPayment({
             "font-size": "16px",
             "font-family": "system-ui, -apple-system, sans-serif",
             color: "#374151",
+            "background-color": "white",
           },
           ".invalid": {
             color: "#ef4444",
@@ -170,12 +188,25 @@ export function PayPalPayment({
         },
       })
 
-      // Render card fields
-      cardFieldsRef.current.NumberField().render("#card-number-field")
-      cardFieldsRef.current.ExpiryField().render("#card-expiry-field")
-      cardFieldsRef.current.CVVField().render("#card-cvv-field")
+      try {
+        console.log("[v0] Rendering card number field")
+        cardFieldsRef.current.NumberField().render("#card-number-field")
+
+        console.log("[v0] Rendering expiry field")
+        cardFieldsRef.current.ExpiryField().render("#card-expiry-field")
+
+        console.log("[v0] Rendering CVV field")
+        cardFieldsRef.current.CVVField().render("#card-cvv-field")
+
+        console.log("[v0] All CardFields rendered successfully")
+        setCardFieldsReady(true)
+      } catch (error) {
+        console.error("[v0] Failed to render CardFields:", error)
+        setError("Failed to initialize payment form")
+      }
     } else {
-      setError("PayPal CardFields not available")
+      console.error("[v0] PayPal CardFields not eligible")
+      setError("PayPal CardFields not available for your region")
     }
   }
 
@@ -191,6 +222,7 @@ export function PayPalPayment({
     setError(null)
 
     try {
+      console.log("[v0] Submitting PayPal payment")
       await cardFieldsRef.current.submit({
         billingAddress: {
           addressLine1: billingData.address,
@@ -222,23 +254,26 @@ export function PayPalPayment({
             <CardDescription>{error}</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <button
+            <Button
               onClick={() => {
                 setError(null)
                 initializationRef.current = false
-                initializePayPal()
+                setCardFieldsReady(false)
+                setTimeout(() => {
+                  initializePayPal()
+                }, 100)
               }}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700"
             >
               Try Again
-            </button>
+            </Button>
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  if (!paypalLoaded) {
+  if (!paypalLoaded || !cardFieldsReady) {
     return (
       <div>
         <div className="mb-6 flex justify-center">
@@ -250,7 +285,7 @@ export function PayPalPayment({
         <Card className="max-w-2xl mx-auto">
           <CardContent className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            <span>Loading PayPal...</span>
+            <span>Loading PayPal payment form...</span>
           </CardContent>
         </Card>
       </div>
@@ -280,7 +315,6 @@ export function PayPalPayment({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Billing Information */}
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label htmlFor="cardholder_name">Cardholder Name *</Label>
@@ -290,28 +324,6 @@ export function PayPalPayment({
                   onChange={(e) => setBillingData((prev) => ({ ...prev, cardholder_name: e.target.value }))}
                   required
                 />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="email_address">Email Address *</Label>
-                  <Input
-                    id="email_address"
-                    type="email"
-                    value={billingData.email_address}
-                    onChange={(e) => setBillingData((prev) => ({ ...prev, email_address: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone_number">Phone Number *</Label>
-                  <Input
-                    id="phone_number"
-                    value={billingData.phone_number}
-                    onChange={(e) => setBillingData((prev) => ({ ...prev, phone_number: e.target.value }))}
-                    required
-                  />
-                </div>
               </div>
 
               <div>
@@ -350,17 +362,26 @@ export function PayPalPayment({
             <div className="space-y-4">
               <div>
                 <Label>Card Number *</Label>
-                <div id="card-number-field" className="border border-gray-300 rounded-md p-3 min-h-[48px]"></div>
+                <div
+                  id="card-number-field"
+                  className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
+                ></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Expiry (MM/YY) *</Label>
-                  <div id="card-expiry-field" className="border border-gray-300 rounded-md p-3 min-h-[48px]"></div>
+                  <div
+                    id="card-expiry-field"
+                    className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
+                  ></div>
                 </div>
                 <div>
                   <Label>CVV *</Label>
-                  <div id="card-cvv-field" className="border border-gray-300 rounded-md p-3 min-h-[48px]"></div>
+                  <div
+                    id="card-cvv-field"
+                    className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
+                  ></div>
                 </div>
               </div>
             </div>
