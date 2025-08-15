@@ -2,51 +2,65 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Loader2 } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface PayPalPaymentProps {
-  amount: number
-  isRecurring: boolean
   contractData: any
-  onSuccess: () => void
-  onError: (error: string) => void
-  processing: boolean
-  setProcessing: (processing: boolean) => void
+  renewalState: any
+  paymentAmount: number
+  onPaymentComplete?: () => void
+  onBack?: () => void
 }
 
 export function PayPalPayment({
-  amount,
-  isRecurring,
   contractData,
-  onSuccess,
-  onError,
-  processing,
-  setProcessing,
+  renewalState,
+  paymentAmount,
+  onPaymentComplete,
+  onBack,
 }: PayPalPaymentProps) {
   const [paypalLoaded, setPaypalLoaded] = useState(false)
+  const [processing, setProcessing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const paypalRef = useRef<HTMLDivElement>(null)
+  const initializationRef = useRef(false)
+
+  const isRecurring = (renewalState?.selectedPayments || 1) > 1
 
   useEffect(() => {
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
 
     if (!clientId) {
       console.error("[v0] PayPal Client ID not found in environment variables")
-      onError("PayPal configuration error")
+      setError("PayPal configuration error")
       return
     }
 
     console.log("[v0] Loading PayPal SDK with client ID:", clientId)
 
+    // Check if PayPal SDK is already loaded
+    if ((window as any).paypal) {
+      console.log("[v0] PayPal SDK already loaded")
+      setPaypalLoaded(true)
+      setTimeout(() => {
+        initializePayPal()
+      }, 100)
+      return
+    }
+
     // Load PayPal SDK
     const script = document.createElement("script")
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=${isRecurring ? "subscription" : "capture"}`
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=${isRecurring ? "subscription" : "capture"}&currency=CAD`
     script.onload = () => {
       console.log("[v0] PayPal SDK loaded successfully")
       setPaypalLoaded(true)
-      initializePayPal()
+      setTimeout(() => {
+        initializePayPal()
+      }, 200)
     }
     script.onerror = () => {
       console.error("[v0] Failed to load PayPal SDK")
-      onError("Failed to load PayPal")
+      setError("Failed to load PayPal")
     }
     document.head.appendChild(script)
 
@@ -55,15 +69,29 @@ export function PayPalPayment({
         document.head.removeChild(script)
       }
     }
-  }, [isRecurring])
+  }, [])
 
   const initializePayPal = () => {
-    if (!paypalRef.current || !(window as any).paypal) {
-      console.error("[v0] PayPal reference or SDK not available")
+    if (initializationRef.current) {
+      console.log("[v0] PayPal already initialized")
+      return
+    }
+
+    if (!paypalRef.current) {
+      console.error("[v0] PayPal container not available")
+      return
+    }
+
+    if (!(window as any).paypal) {
+      console.error("[v0] PayPal SDK not available")
+      setTimeout(() => {
+        initializePayPal()
+      }, 500)
       return
     }
 
     console.log("[v0] Initializing PayPal buttons")
+    initializationRef.current = true
     const paypal = (window as any).paypal
 
     if (isRecurring) {
@@ -75,11 +103,12 @@ export function PayPalPayment({
 
             try {
               // Create subscription plan on your backend first
-              const planResponse = await fetch("/api/create-paypal-plan", {
+              const planResponse = await fetch("/api/paypal/create-subscription", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  amount: amount,
+                  amount: paymentAmount,
+                  installments: renewalState?.selectedPayments || 1,
                   contractData: contractData,
                 }),
               })
@@ -90,7 +119,7 @@ export function PayPalPayment({
                 plan_id: planData.planId,
               })
             } catch (error) {
-              onError("Failed to create subscription plan")
+              setError("Failed to create subscription plan")
               setProcessing(false)
               throw error
             }
@@ -98,30 +127,32 @@ export function PayPalPayment({
           onApprove: async (data: any, actions: any) => {
             try {
               // Activate subscription on your backend
-              const response = await fetch("/api/activate-paypal-subscription", {
+              const response = await fetch("/api/paypal/activate-subscription", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   subscriptionId: data.subscriptionID,
                   contractData: contractData,
+                  renewalState: renewalState,
                 }),
               })
 
               const result = await response.json()
 
               if (result.success) {
-                onSuccess()
+                onPaymentComplete?.()
               } else {
                 throw new Error(result.error)
               }
             } catch (error) {
-              onError("Failed to activate subscription")
+              setError("Failed to activate subscription")
             } finally {
               setProcessing(false)
             }
           },
           onError: (err: any) => {
-            onError("PayPal subscription error")
+            console.error("[v0] PayPal subscription error:", err)
+            setError("PayPal subscription error")
             setProcessing(false)
           },
         })
@@ -130,51 +161,55 @@ export function PayPalPayment({
       // For one-time payments
       paypal
         .Buttons({
-          createOrder: (data: any, actions: any) => {
+          createOrder: async (data: any, actions: any) => {
             setProcessing(true)
 
-            return actions.order.create({
-              purchase_units: [
-                {
-                  amount: {
-                    value: amount.toFixed(2),
-                    currency_code: "CAD",
-                  },
-                  description: `Snow Removal Contract ${contractData.contractId}`,
-                },
-              ],
-            })
-          },
-          onApprove: async (data: any, actions: any) => {
             try {
-              const details = await actions.order.capture()
-
-              // Send confirmation to your backend
-              const response = await fetch("/api/confirm-paypal-payment", {
+              const response = await fetch("/api/paypal/create-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  orderId: data.orderID,
-                  paymentDetails: details,
+                  amount: paymentAmount,
                   contractData: contractData,
+                }),
+              })
+
+              const orderData = await response.json()
+              return orderData.orderID
+            } catch (error) {
+              setError("Failed to create order")
+              setProcessing(false)
+              throw error
+            }
+          },
+          onApprove: async (data: any, actions: any) => {
+            try {
+              const response = await fetch("/api/paypal/capture-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  orderID: data.orderID,
+                  contractData: contractData,
+                  renewalState: renewalState,
                 }),
               })
 
               const result = await response.json()
 
               if (result.success) {
-                onSuccess()
+                onPaymentComplete?.()
               } else {
                 throw new Error(result.error)
               }
             } catch (error) {
-              onError("Payment confirmation failed")
+              setError("Payment confirmation failed")
             } finally {
               setProcessing(false)
             }
           },
           onError: (err: any) => {
-            onError("PayPal payment error")
+            console.error("[v0] PayPal payment error:", err)
+            setError("PayPal payment error")
             setProcessing(false)
           },
         })
@@ -182,32 +217,79 @@ export function PayPalPayment({
     }
   }
 
+  if (error) {
+    return (
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl text-red-600">Payment Error</CardTitle>
+          <CardDescription>{error}</CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+          <button
+            onClick={() => {
+              setError(null)
+              initializationRef.current = false
+              initializePayPal()
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </CardContent>
+      </Card>
+    )
+  }
+
   if (!paypalLoaded) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin mr-2" />
-        <span>Loading PayPal...</span>
-      </div>
+      <Card className="max-w-2xl mx-auto">
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+          <span>Loading PayPal...</span>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* PayPal Button Container */}
-      <div ref={paypalRef} className="min-h-[50px]"></div>
-
-      {processing && (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-          <span>Processing payment...</span>
+    <Card className="max-w-2xl mx-auto">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl">PayPal Payment</CardTitle>
+        <CardDescription>
+          {isRecurring
+            ? `Complete your ${renewalState?.selectedPayments}-payment installment plan`
+            : "Complete your one-time payment"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div className="flex justify-between items-center">
+            <span className="font-medium">Payment Amount:</span>
+            <span className="font-bold text-green-600 text-lg">${paymentAmount.toFixed(2)} CAD</span>
+          </div>
+          {isRecurring && (
+            <div className="text-sm text-slate-600 mt-2">
+              First payment of {renewalState?.selectedPayments} installments
+            </div>
+          )}
         </div>
-      )}
 
-      {isRecurring && (
-        <p className="text-xs text-slate-600 text-center">
-          By proceeding, you authorize recurring payments for your installment plan.
-        </p>
-      )}
-    </div>
+        {/* PayPal Button Container */}
+        <div ref={paypalRef} className="min-h-[50px]"></div>
+
+        {processing && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            <span>Processing payment...</span>
+          </div>
+        )}
+
+        {isRecurring && (
+          <p className="text-xs text-slate-600 text-center">
+            By proceeding, you authorize recurring payments for your installment plan.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   )
 }
