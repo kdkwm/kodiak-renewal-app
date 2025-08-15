@@ -26,12 +26,8 @@ export function PayPalPayment({
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sdkLoaded, setSdkLoaded] = useState(false)
 
   const cardFieldsRef = useRef<any>(null)
-  const numberFieldRef = useRef<HTMLDivElement>(null)
-  const expiryFieldRef = useRef<HTMLDivElement>(null)
-  const cvvFieldRef = useRef<HTMLDivElement>(null)
 
   const [billingData, setBillingData] = useState({
     cardholder_name: contractData?.customer_name || "",
@@ -40,7 +36,6 @@ export function PayPalPayment({
     postal_code: contractData?.postal_code || "",
   })
 
-  // Load PayPal SDK
   useEffect(() => {
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
     if (!clientId) {
@@ -48,32 +43,14 @@ export function PayPalPayment({
       return
     }
 
-    const script = document.createElement("script")
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=card-fields&currency=CAD`
-    script.onload = () => {
-      console.log("[v0] PayPal SDK loaded")
-      setSdkLoaded(true)
-    }
-    script.onerror = () => {
-      setError("Failed to load PayPal")
-    }
-    document.head.appendChild(script)
-
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script)
-      }
-    }
-  }, [])
-
-  // Initialize PayPal CardFields after SDK loads and DOM is ready
-  useEffect(() => {
-    if (!sdkLoaded) return
-
     const initializePayPal = () => {
-      if (!numberFieldRef.current || !expiryFieldRef.current || !cvvFieldRef.current) {
-        console.log("[v0] DOM elements not ready, retrying...")
-        setTimeout(initializePayPal, 100)
+      // Check if DOM elements exist using getElementById
+      const numberEl = document.getElementById("card-number-field")
+      const expiryEl = document.getElementById("card-expiry-field")
+      const cvvEl = document.getElementById("card-cvv-field")
+
+      if (!numberEl || !expiryEl || !cvvEl) {
+        setTimeout(initializePayPal, 100) // Retry every 100ms
         return
       }
 
@@ -84,7 +61,6 @@ export function PayPalPayment({
       }
 
       try {
-        console.log("[v0] Initializing PayPal CardFields...")
         cardFieldsRef.current = paypal.CardFields({
           createOrder: async () => {
             const response = await fetch("/api/paypal/create-order", {
@@ -122,28 +98,34 @@ export function PayPalPayment({
             setProcessing(false)
           },
           onError: (error: any) => {
-            console.error("[v0] PayPal error:", error)
             setError("Payment error occurred")
             setProcessing(false)
           },
         })
 
-        // Render card fields using refs
-        cardFieldsRef.current.NumberField().render(numberFieldRef.current)
-        cardFieldsRef.current.ExpiryField().render(expiryFieldRef.current)
-        cardFieldsRef.current.CVVField().render(cvvFieldRef.current)
+        // Render card fields using element IDs
+        cardFieldsRef.current.NumberField().render("#card-number-field")
+        cardFieldsRef.current.ExpiryField().render("#card-expiry-field")
+        cardFieldsRef.current.CVVField().render("#card-cvv-field")
 
-        console.log("[v0] PayPal CardFields initialized successfully")
         setLoading(false)
       } catch (error) {
-        console.error("[v0] CardFields initialization error:", error)
         setError("Failed to initialize payment form")
       }
     }
 
-    // Start initialization after a brief delay to ensure DOM is ready
-    setTimeout(initializePayPal, 100)
-  }, [sdkLoaded, paymentAmount, contractData, renewalState, onPaymentComplete])
+    const script = document.createElement("script")
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=card-fields&currency=CAD`
+    script.onload = initializePayPal
+    script.onerror = () => setError("Failed to load PayPal SDK")
+    document.head.appendChild(script)
+
+    return () => {
+      if (document.head.contains(script)) {
+        document.head.removeChild(script)
+      }
+    }
+  }, [paymentAmount, contractData, renewalState, onPaymentComplete])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -161,7 +143,6 @@ export function PayPalPayment({
         },
       })
     } catch (error) {
-      console.error("[v0] Payment submission error:", error)
       setError("Payment submission failed")
       setProcessing(false)
     }
@@ -267,24 +248,29 @@ export function PayPalPayment({
               </div>
             </div>
 
-            {/* PayPal Card Fields */}
             <div className="space-y-4">
               <div>
                 <Label>Card Number *</Label>
-                <div ref={numberFieldRef} className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"></div>
+                <div
+                  id="card-number-field"
+                  className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
+                ></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Expiry (MM/YY) *</Label>
                   <div
-                    ref={expiryFieldRef}
+                    id="card-expiry-field"
                     className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
                   ></div>
                 </div>
                 <div>
                   <Label>CVV *</Label>
-                  <div ref={cvvFieldRef} className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"></div>
+                  <div
+                    id="card-cvv-field"
+                    className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
+                  ></div>
                 </div>
               </div>
             </div>
