@@ -26,12 +26,27 @@ export function PayPalPayment({
   const paypalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
+
+    if (!clientId) {
+      console.error("[v0] PayPal Client ID not found in environment variables")
+      onError("PayPal configuration error")
+      return
+    }
+
+    console.log("[v0] Loading PayPal SDK with client ID:", clientId)
+
     // Load PayPal SDK
     const script = document.createElement("script")
-    script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&vault=true&intent=${isRecurring ? "subscription" : "capture"}`
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=${isRecurring ? "subscription" : "capture"}`
     script.onload = () => {
+      console.log("[v0] PayPal SDK loaded successfully")
       setPaypalLoaded(true)
       initializePayPal()
+    }
+    script.onerror = () => {
+      console.error("[v0] Failed to load PayPal SDK")
+      onError("Failed to load PayPal")
     }
     document.head.appendChild(script)
 
@@ -43,8 +58,12 @@ export function PayPalPayment({
   }, [isRecurring])
 
   const initializePayPal = () => {
-    if (!paypalRef.current || !(window as any).paypal) return
+    if (!paypalRef.current || !(window as any).paypal) {
+      console.error("[v0] PayPal reference or SDK not available")
+      return
+    }
 
+    console.log("[v0] Initializing PayPal buttons")
     const paypal = (window as any).paypal
 
     if (isRecurring) {

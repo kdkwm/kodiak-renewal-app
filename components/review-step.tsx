@@ -57,13 +57,6 @@ export function ReviewStep({
               )}
             </div>
           </div>
-
-          <div className="flex justify-between items-center">
-            <span className="text-slate-600">Company:</span>
-            <span className="font-medium">
-              {contractData.company === "KSB" ? "Kodiak Snowblowing & Lawncare" : "Kodiak Snow Removal"}
-            </span>
-          </div>
         </div>
 
         <Separator />

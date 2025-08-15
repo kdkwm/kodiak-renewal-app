@@ -44,10 +44,11 @@ export function PaymentScheduleStep({
     if (type === "full") {
       setRenewalState((prev: any) => ({ ...prev, selectedPayments: 1 }))
       setShowInstallments(false)
+      setShowPaymentMethods(true) // Show payment methods immediately for full payment
     } else {
       setShowInstallments(true)
+      setShowPaymentMethods(false) // Don't show payment methods until installment count is selected
     }
-    setShowPaymentMethods(true)
   }
 
   // Auto-scroll to installment section when it becomes visible
@@ -75,6 +76,7 @@ export function PaymentScheduleStep({
 
   const handleInstallmentChoice = (payments: number) => {
     setRenewalState((prev: any) => ({ ...prev, selectedPayments: payments }))
+    setShowPaymentMethods(true) // Show payment methods only after installment count is selected
   }
 
   const handlePaymentMethodSelect = (method: string) => {

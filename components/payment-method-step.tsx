@@ -136,25 +136,41 @@ export function PaymentMethodSection({
 
   if (renewalState.selectedPaymentMethod === "paypal" && isKSB) {
     return (
-      <PayPalPayment
-        contractData={contractData}
-        renewalState={renewalState}
-        paymentAmount={paymentAmount}
-        onPaymentComplete={onPaymentComplete}
-        onBack={onBack}
-      />
+      <div>
+        <div className="mb-6 flex justify-center">
+          <Button size="lg" variant="outline" onClick={onBack} className="bg-white h-12">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </div>
+        <PayPalPayment
+          contractData={contractData}
+          renewalState={renewalState}
+          paymentAmount={paymentAmount}
+          onPaymentComplete={onPaymentComplete}
+          onBack={onBack}
+        />
+      </div>
     )
   }
 
   if (renewalState.selectedPaymentMethod === "credit") {
     return (
-      <BamboraPayment
-        contractData={contractData}
-        renewalState={renewalState}
-        paymentAmount={paymentAmount}
-        onPaymentComplete={onPaymentComplete}
-        onBack={onBack}
-      />
+      <div>
+        <div className="mb-6 flex justify-center">
+          <Button size="lg" variant="outline" onClick={onBack} className="bg-white h-12">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </div>
+        <BamboraPayment
+          contractData={contractData}
+          renewalState={renewalState}
+          paymentAmount={paymentAmount}
+          onPaymentComplete={onPaymentComplete}
+          onBack={onBack}
+        />
+      </div>
     )
   }
 
@@ -189,137 +205,148 @@ export function PaymentMethodSection({
   }
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader className="text-center">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Mail className="w-6 h-6 text-blue-600" />
-          <CardTitle className="text-2xl">Interac e-Transfer Payment</CardTitle>
-        </div>
-        <CardDescription>Follow these steps to complete your payment</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-8">
-        <div className="space-y-8">
-          <div>
-            <h3 className="font-semibold text-lg mb-6">One-Time Payment</h3>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                  1
+    <div>
+      <div className="mb-6 flex justify-center">
+        <Button size="lg" variant="outline" onClick={onBack} className="bg-white h-12">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+      </div>
+
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader className="text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Mail className="w-6 h-6 text-blue-600" />
+            <CardTitle className="text-2xl">Interac e-Transfer Payment</CardTitle>
+          </div>
+          <CardDescription>Follow these steps to complete your payment</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          <div className="space-y-8">
+            <div>
+              <h3 className="font-semibold text-lg mb-6">One-Time Payment</h3>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                    1
+                  </div>
+                  <p className="text-sm">Log in to your online banking (via website or app).</p>
                 </div>
-                <p className="text-sm">Log in to your online banking (via website or app).</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                  2
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                    2
+                  </div>
+                  <p className="text-sm">Go to the Interac e-Transfer or Send Money section.</p>
                 </div>
-                <p className="text-sm">Go to the Interac e-Transfer or Send Money section.</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                  3
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                    3
+                  </div>
+                  <p className="text-sm">Select Send an e-Transfer.</p>
                 </div>
-                <p className="text-sm">Select Send an e-Transfer.</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                  4
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                    4
+                  </div>
+                  <div className="text-sm">
+                    <p className="mb-2">
+                      Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-3 text-xs bg-transparent w-full sm:w-auto"
+                      onClick={copyEmail}
+                    >
+                      {emailCopied ? "Copied!" : "Copy email"}
+                    </Button>
+                  </div>
                 </div>
-                <div className="text-sm">
-                  <p className="mb-2">
-                    Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>.
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                    5
+                  </div>
+                  <p className="text-sm">
+                    Enter the payment amount and <strong>add your name/address in the message</strong> so we can match
+                    it to your account.
                   </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 px-3 text-xs bg-transparent w-full sm:w-auto"
-                    onClick={copyEmail}
-                  >
-                    {emailCopied ? "Copied!" : "Copy email"}
-                  </Button>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                    6
+                  </div>
+                  <p className="text-sm">Review the details and click Send.</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                  5
+
+              {isInstallments && (
+                <div className="border-t pt-8">
+                  <h3 className="font-semibold text-lg mb-6">How to make your installment payments</h3>
+                  <p className="text-sm italic mb-6">(Follow the One-Time Payment steps above for each payment.)</p>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        1
+                      </div>
+                      <p className="text-sm">Make your first payment now.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        2
+                      </div>
+                      <p className="text-sm">
+                        On the agreed dates, log in each month to send the next payment manually.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        3
+                      </div>
+                      <p className="text-sm">Payment Schedule:</p>
+                    </div>
+                    <div className="ml-9 bg-slate-50 border border-slate-200 rounded-lg p-4">
+                      <div className="space-y-2">
+                        {paymentDates.map((date, i) => (
+                          <div key={i} className="flex justify-between items-center py-1">
+                            <span className="font-medium text-slate-700">
+                              {i === 0 ? "2nd" : i === 1 ? "3rd" : `${i + 2}th`} Payment:
+                            </span>
+                            <div className="text-right">
+                              <div className="font-semibold text-green-600">${paymentAmount.toFixed(2)}</div>
+                              <div className="text-xs text-slate-500">{date}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        4
+                      </div>
+                      <p className="text-sm">
+                        Ensure each payment is sent to <span className="font-mono text-blue-600">{companyEmail}</span>{" "}
+                        with your name/address in the message.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm">
-                  Enter the payment amount and <strong>add your name/address in the message</strong> so we can match it
-                  to your account.
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                  6
-                </div>
-                <p className="text-sm">Review the details and click Send.</p>
-              </div>
+              )}
             </div>
 
-            {isInstallments && (
-              <div className="border-t pt-8">
-                <h3 className="font-semibold text-lg mb-6">How to make your installment payments</h3>
-                <p className="text-sm italic mb-6">(Follow the One-Time Payment steps above for each payment.)</p>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                      1
-                    </div>
-                    <p className="text-sm">Make your first payment now.</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                      2
-                    </div>
-                    <p className="text-sm">On the agreed dates, log in each month to send the next payment manually.</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                      3
-                    </div>
-                    <p className="text-sm">Payment Schedule:</p>
-                  </div>
-                  <div className="ml-9 bg-slate-50 border border-slate-200 rounded-lg p-4">
-                    <div className="space-y-2">
-                      {paymentDates.map((date, i) => (
-                        <div key={i} className="flex justify-between items-center py-1">
-                          <span className="font-medium text-slate-700">
-                            {i === 0 ? "2nd" : i === 1 ? "3rd" : `${i + 2}th`} Payment:
-                          </span>
-                          <div className="text-right">
-                            <div className="font-semibold text-green-600">${paymentAmount.toFixed(2)}</div>
-                            <div className="text-xs text-slate-500">{date}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                      4
-                    </div>
-                    <p className="text-sm">
-                      Ensure each payment is sent to <span className="font-mono text-blue-600">{companyEmail}</span>{" "}
-                      with your name/address in the message.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3 pt-4">
-            <Button size="lg" onClick={onPaymentComplete} className="w-full bg-blue-600 hover:bg-blue-700 h-12">
-              I've sent the eTransfer
-            </Button>
-            {isInstallments && (
-              <Button size="lg" variant="outline" className="w-full bg-transparent h-12">
-                Remind me about future payments
+            <div className="flex flex-col gap-3 pt-4">
+              <Button size="lg" onClick={onPaymentComplete} className="w-full bg-blue-600 hover:bg-blue-700 h-12">
+                I've sent the eTransfer
               </Button>
-            )}
+              {isInstallments && (
+                <Button size="lg" variant="outline" className="w-full bg-transparent h-12">
+                  Remind me about future payments
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
@@ -344,6 +371,7 @@ export function PaymentMethodStep({
           renewalState={renewalState}
           setRenewalState={setRenewalState}
           onPaymentComplete={onPaymentComplete}
+          onBack={onPrev}
         />
       </div>
     </div>
