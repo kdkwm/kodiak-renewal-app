@@ -39,116 +39,126 @@ export function PayPalPayment({
       return
     }
 
-    const initializePayPal = () => {
-      const nameContainer = document.getElementById("card-name-field-container")
-      const numberContainer = document.getElementById("card-number-field-container")
-      const expiryContainer = document.getElementById("card-expiry-field-container")
-      const cvvContainer = document.getElementById("card-cvv-field-container")
-
-      if (!nameContainer || !numberContainer || !expiryContainer || !cvvContainer) {
-        setTimeout(initializePayPal, 100)
-        return
-      }
-
-      const paypal = (window as any).paypal
-      if (!paypal?.CardFields) {
-        setError("PayPal CardFields not available")
-        return
-      }
-
+    const createOrderCallback = async () => {
       try {
+        const response = await fetch("/api/paypal/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: paymentAmount,
+            contractData: contractData,
+          }),
+        })
+        const orderData = await response.json()
+        if (orderData.id) {
+          return orderData.id
+        } else {
+          throw new Error("Failed to create order")
+        }
+      } catch (error) {
+        console.error(error)
+        throw error
+      }
+    }
+
+    const onApproveCallback = async (data: any) => {
+      setProcessing(true)
+      try {
+        const response = await fetch("/api/paypal/capture-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderID: data.orderID,
+            contractData: contractData,
+            renewalState: renewalState,
+          }),
+        })
+        const result = await response.json()
+        if (result.success) {
+          onPaymentComplete?.()
+        } else {
+          setError("Payment failed")
+        }
+      } catch (error) {
+        setError("Payment processing failed")
+      }
+      setProcessing(false)
+    }
+
+    const initializePayPal = () => {
+      const paypal = (window as any).paypal
+
+      if (paypal.CardFields.isEligible()) {
         const cardField = paypal.CardFields({
-          createOrder: async () => {
-            const response = await fetch("/api/paypal/create-order", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                amount: paymentAmount,
-                contractData: contractData,
-              }),
-            })
-            const data = await response.json()
-            return data.orderID
-          },
-          onApprove: async (data: any) => {
-            setProcessing(true)
-            try {
-              const response = await fetch("/api/paypal/capture-order", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  orderID: data.orderID,
-                  contractData: contractData,
-                  renewalState: renewalState,
-                }),
-              })
-              const result = await response.json()
-              if (result.success) {
-                onPaymentComplete?.()
-              } else {
-                setError("Payment failed")
-              }
-            } catch (error) {
-              setError("Payment processing failed")
-            }
-            setProcessing(false)
-          },
-          onError: (error: any) => {
-            setError("Payment error occurred")
-            setProcessing(false)
+          createOrder: createOrderCallback,
+          onApprove: onApproveCallback,
+          style: {
+            ".valid": { color: "green" },
+            ".invalid": { color: "red" },
+            input: {
+              "font-size": "16px",
+              "font-family": "courier, monospace",
+              "font-weight": "lighter",
+              color: "#ccc",
+            },
           },
         })
 
-        if (cardField.isEligible()) {
-          const nameField = cardField.NameField()
-          nameField.render("#card-name-field-container")
-
-          const numberField = cardField.NumberField()
-          numberField.render("#card-number-field-container")
-
-          const expiryField = cardField.ExpiryField()
-          expiryField.render("#card-expiry-field-container")
-
-          const cvvField = cardField.CVVField()
-          cvvField.render("#card-cvv-field-container")
-
-          const submitButton = document.getElementById("paypal-submit-button")
-          if (submitButton) {
-            submitButton.addEventListener("click", () => {
-              setProcessing(true)
-              cardField
-                .submit({
-                  billingAddress: {
-                    addressLine1: billingData.address,
-                    adminArea2: billingData.city,
-                    adminArea1: "ON",
-                    postalCode: billingData.postal_code,
-                    countryCode: "CA",
-                  },
-                })
-                .then(() => {
-                  // Submit successful - onApprove will handle the rest
-                })
-                .catch((error: any) => {
-                  setError("Payment submission failed")
-                  setProcessing(false)
-                })
-            })
-          }
-
-          setLoading(false)
-        } else {
-          setError("PayPal CardFields not available for this account")
+        if (cardField.NameField().isEligible()) {
+          cardField.NameField().render("#cardholder-name-field")
         }
-      } catch (error) {
-        setError("Failed to initialize payment form")
+
+        if (cardField.NumberField().isEligible()) {
+          cardField.NumberField().render("#card-number-field")
+        }
+
+        if (cardField.ExpiryField().isEligible()) {
+          cardField.ExpiryField().render("#expiry-field")
+        }
+
+        if (cardField.CVVField().isEligible()) {
+          cardField.CVVField().render("#cvv-field")
+        }
+
+        setLoading(false)
+
+        const form = document.querySelector("#card-form")
+        if (form) {
+          form.addEventListener("submit", async (event: any) => {
+            event.preventDefault()
+            setProcessing(true)
+
+            try {
+              const data = await cardField.submit({
+                billingAddress: {
+                  addressLine1: billingData.address,
+                  locality: billingData.city,
+                  region: "ON",
+                  postalCode: billingData.postal_code,
+                  countryCodeAlpha2: "CA",
+                },
+              })
+
+              return await onApproveCallback(data)
+            } catch (error) {
+              setError("Payment could not be processed")
+              setProcessing(false)
+            }
+          })
+        }
+      } else {
+        setError("PayPal CardFields not available for this account")
       }
     }
 
     const script = document.createElement("script")
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons,card-fields&currency=CAD`
-    script.onload = initializePayPal
-    script.onerror = () => setError("Failed to load PayPal SDK")
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=card-fields&currency=CAD`
+    script.onload = () => {
+      setTimeout(initializePayPal, 500)
+    }
+    script.onerror = () => {
+      setError("Failed to load PayPal SDK")
+    }
     document.head.appendChild(script)
 
     return () => {
@@ -214,45 +224,43 @@ export function PayPalPayment({
           <CardDescription>One-time payment of ${paymentAmount.toFixed(2)} CAD</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label>Cardholder Name *</Label>
-                <div
-                  id="card-name-field-container"
-                  className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
-                ></div>
-              </div>
+          <form id="card-form" className="space-y-6">
+            <div>
+              <Label>Cardholder Name *</Label>
+              <div
+                id="cardholder-name-field"
+                className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
+              ></div>
+            </div>
 
+            <div>
+              <Label htmlFor="address">Address *</Label>
+              <Input
+                id="address"
+                value={billingData.address}
+                onChange={(e) => setBillingData((prev) => ({ ...prev, address: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="address">Address *</Label>
+                <Label htmlFor="city">City *</Label>
                 <Input
-                  id="address"
-                  value={billingData.address}
-                  onChange={(e) => setBillingData((prev) => ({ ...prev, address: e.target.value }))}
+                  id="city"
+                  value={billingData.city}
+                  onChange={(e) => setBillingData((prev) => ({ ...prev, city: e.target.value }))}
                   required
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="city">City *</Label>
-                  <Input
-                    id="city"
-                    value={billingData.city}
-                    onChange={(e) => setBillingData((prev) => ({ ...prev, city: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="postal_code">Postal Code *</Label>
-                  <Input
-                    id="postal_code"
-                    value={billingData.postal_code}
-                    onChange={(e) => setBillingData((prev) => ({ ...prev, postal_code: e.target.value }))}
-                    required
-                  />
-                </div>
+              <div>
+                <Label htmlFor="postal_code">Postal Code *</Label>
+                <Input
+                  id="postal_code"
+                  value={billingData.postal_code}
+                  onChange={(e) => setBillingData((prev) => ({ ...prev, postal_code: e.target.value }))}
+                  required
+                />
               </div>
             </div>
 
@@ -260,7 +268,7 @@ export function PayPalPayment({
               <div>
                 <Label>Card Number *</Label>
                 <div
-                  id="card-number-field-container"
+                  id="card-number-field"
                   className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
                 ></div>
               </div>
@@ -268,27 +276,16 @@ export function PayPalPayment({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Expiry (MM/YY) *</Label>
-                  <div
-                    id="card-expiry-field-container"
-                    className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
-                  ></div>
+                  <div id="expiry-field" className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"></div>
                 </div>
                 <div>
                   <Label>CVV *</Label>
-                  <div
-                    id="card-cvv-field-container"
-                    className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"
-                  ></div>
+                  <div id="cvv-field" className="border border-gray-300 rounded-md p-3 min-h-[48px] bg-white"></div>
                 </div>
               </div>
             </div>
 
-            <Button
-              id="paypal-submit-button"
-              type="button"
-              className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700"
-              disabled={processing}
-            >
+            <Button type="submit" className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700" disabled={processing}>
               {processing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -305,7 +302,7 @@ export function PayPalPayment({
                 <span>Secure payments processed by PayPal</span>
               </div>
             </div>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>
