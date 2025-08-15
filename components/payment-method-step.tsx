@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CreditCard, ArrowLeft, Mail } from "lucide-react"
+import { ArrowLeft, Mail } from "lucide-react"
 import { BamboraPayment } from "./bambora-payment"
 import { PayPalPayment } from "./paypal-payment"
 import { useState, useEffect } from "react"
@@ -35,6 +35,7 @@ export function PaymentMethodStep({
 
   console.log("[v0] PaymentMethodStep - contractData.company:", contractData.company)
   console.log("[v0] PaymentMethodStep - isKSB:", isKSB)
+  console.log("[v0] About to render payment buttons - isKSB:", isKSB)
 
   const scrollToTop = () => {
     // Use multiple methods for better browser compatibility
@@ -102,109 +103,107 @@ export function PaymentMethodStep({
     )
   }
 
-  if (renewalState.selectedPaymentMethod === "etransfer") {
-    const companyEmail = contractData.company === "KSB" ? "info@kodiaksnow.ca" : "info@kodiaksnowremoval.ca"
-    const isInstallments = (renewalState?.selectedPayments || 1) > 1
+  const companyEmail = contractData.company === "KSB" ? "info@kodiaksnow.ca" : "info@kodiaksnowremoval.ca"
+  const isInstallments = (renewalState?.selectedPayments || 1) > 1
 
-    const getPaymentDates = () => {
-      const dates = []
-      const today = new Date()
+  const getPaymentDates = () => {
+    const dates = []
+    const today = new Date()
 
-      for (let i = 1; i < (renewalState?.selectedPayments || 1); i++) {
-        const futureDate = new Date(today)
-        futureDate.setMonth(today.getMonth() + i)
-        dates.push(
-          futureDate.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }),
-        )
-      }
-      return dates
+    for (let i = 1; i < (renewalState?.selectedPayments || 1); i++) {
+      const futureDate = new Date(today)
+      futureDate.setMonth(today.getMonth() + i)
+      dates.push(
+        futureDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+      )
     }
+    return dates
+  }
 
-    const paymentDates = getPaymentDates()
+  const paymentDates = getPaymentDates()
 
-    const copyEmail = () => {
-      navigator.clipboard.writeText(companyEmail)
-      setEmailCopied(true)
-      setTimeout(() => setEmailCopied(false), 2000)
-    }
+  const copyEmail = () => {
+    navigator.clipboard.writeText(companyEmail)
+    setEmailCopied(true)
+    setTimeout(() => setEmailCopied(false), 2000)
+  }
 
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <div className="mb-6 flex justify-center">
-            <Button size="lg" variant="outline" onClick={onPrev} className="bg-white h-12">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </div>
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Mail className="w-6 h-6 text-blue-600" />
-                <CardTitle className="text-2xl">Interac e-Transfer Payment</CardTitle>
-              </div>
-              <CardDescription>Follow these steps to complete your payment</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              <div className="space-y-8">
-                <div>
-                  <h3 className="font-semibold text-lg mb-6">One-Time Payment</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                        1
-                      </div>
-                      <p className="text-sm">Log in to your online banking (via website or app).</p>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="mb-6 flex justify-center">
+          <Button size="lg" variant="outline" onClick={onPrev} className="bg-white h-12">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </div>
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Mail className="w-6 h-6 text-blue-600" />
+              <CardTitle className="text-2xl">Interac e-Transfer Payment</CardTitle>
+            </div>
+            <CardDescription>Follow these steps to complete your payment</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <div className="space-y-8">
+              <div>
+                <h3 className="font-semibold text-lg mb-6">One-Time Payment</h3>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                      1
                     </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                        2
-                      </div>
-                      <p className="text-sm">Go to the Interac e-Transfer or Send Money section.</p>
+                    <p className="text-sm">Log in to your online banking (via website or app).</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                      2
                     </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                        3
-                      </div>
-                      <p className="text-sm">Select Send an e-Transfer.</p>
+                    <p className="text-sm">Go to the Interac e-Transfer or Send Money section.</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                      3
                     </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                        4
-                      </div>
-                      <div className="text-sm">
-                        <p className="mb-2">
-                          Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>.
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-3 text-xs bg-transparent w-full sm:w-auto"
-                          onClick={copyEmail}
-                        >
-                          {emailCopied ? "Copied!" : "Copy email"}
-                        </Button>
-                      </div>
+                    <p className="text-sm">Select Send an e-Transfer.</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                      4
                     </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                        5
-                      </div>
-                      <p className="text-sm">
-                        Enter the payment amount and <strong>add your name/address in the message</strong> so we can
-                        match it to your account.
+                    <div className="text-sm">
+                      <p className="mb-2">
+                        Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>.
                       </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 text-xs bg-transparent w-full sm:w-auto"
+                        onClick={copyEmail}
+                      >
+                        {emailCopied ? "Copied!" : "Copy email"}
+                      </Button>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                        6
-                      </div>
-                      <p className="text-sm">Review the details and click Send.</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                      5
                     </div>
+                    <p className="text-sm">
+                      Enter the payment amount and <strong>add your name/address in the message</strong> so we can match
+                      it to your account.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                      6
+                    </div>
+                    <p className="text-sm">Review the details and click Send.</p>
                   </div>
                 </div>
 
@@ -272,83 +271,10 @@ export function PaymentMethodStep({
                   </Button>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader className="text-center">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <CreditCard className="w-6 h-6 text-orange-600" />
-          <CardTitle className="text-2xl">Payment Method</CardTitle>
-        </div>
-        <CardDescription>Complete your payment to finalize the contract</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            type="button"
-            className="w-full p-6 h-auto rounded-lg border-2 text-left transition hover:bg-blue-50 border-slate-200"
-            onClick={() => setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: "etransfer" }))}
-          >
-            <div className="flex items-start gap-3">
-              <Mail className="w-6 h-6 text-blue-600 mt-1" />
-              <div>
-                <div className="font-semibold text-lg text-blue-700">Interac e-Transfer</div>
-                <div className="text-blue-700/80 text-sm">Send payment via email transfer</div>
-              </div>
             </div>
-          </button>
-
-          {isKSB ? (
-            <button
-              type="button"
-              className="w-full p-6 h-auto rounded-lg border-2 text-left transition hover:bg-blue-50 border-slate-200"
-              onClick={() => setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: "paypal" }))}
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 mt-1">
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-blue-600">
-                    <path
-                      fill="currentColor"
-                      d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19a.75.75 0 0 0-.741.63l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.26-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.75.75 0 0 0-.741.63l-1.398 8.864a.641.641 0 0 0 .633.74h4.606a.75.75 0 0 0 .741-.63l.131-.828.997-6.314.064-.386a.75.75 0 0 1 .741-.63h.466c3.632 0 6.469-1.472 7.29-5.729.343-1.775.156-3.263-.545-4.314a2.83 2.83 0 0 0-.609-.323z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <div className="font-semibold text-lg text-blue-700">PayPal</div>
-                  <div className="text-blue-700/80 text-sm">Pay securely with PayPal</div>
-                </div>
-              </div>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="w-full p-6 h-auto rounded-lg border-2 text-left transition hover:bg-green-50 border-slate-200"
-              onClick={() => setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: "credit" }))}
-            >
-              <div className="flex items-start gap-3">
-                <CreditCard className="w-6 h-6 text-green-600 mt-1" />
-                <div>
-                  <div className="font-semibold text-lg text-green-700">Credit Card</div>
-                  <div className="text-green-700/80 text-sm">Pay securely with your credit card</div>
-                </div>
-              </div>
-            </button>
-          )}
-        </div>
-
-        <div className="flex justify-start pt-4">
-          <Button size="lg" variant="outline" onClick={onPrev}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Review
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }
