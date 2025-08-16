@@ -8,10 +8,9 @@ import { Label } from "@/components/ui/label"
 
 import {
   PayPalScriptProvider,
-  PayPalButtons,
-  PayPalCardFieldsProvider,
-  PayPalCardFieldsForm,
-  usePayPalCardFields,
+  PayPalHostedFieldsProvider,
+  PayPalHostedField,
+  usePayPalHostedFields,
 } from "@paypal/react-paypal-js"
 
 interface PayPalPaymentProps {
@@ -59,7 +58,7 @@ export function PayPalPayment({
     "client-id": CLIENT_ID,
     currency: "CAD",
     intent: "capture",
-    components: "buttons,card-fields",
+    components: "hosted-fields",
   }
 
   function handleBillingAddressChange(field: string, value: string) {
@@ -98,49 +97,6 @@ export function PayPalPayment({
     }
   }
 
-  async function onApprove(data: any) {
-    try {
-      const response = await fetch(`/api/paypal/capture-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: data.orderID,
-          contractData: contractData,
-          renewalState: renewalState,
-        }),
-      })
-
-      const orderData = await response.json()
-      const transaction =
-        orderData?.purchase_units?.[0]?.payments?.captures?.[0] ||
-        orderData?.purchase_units?.[0]?.payments?.authorizations?.[0]
-      const errorDetail = orderData?.details?.[0]
-
-      if (errorDetail || !transaction || transaction.status === "DECLINED") {
-        let errorMessage
-        if (transaction) {
-          errorMessage = `Transaction ${transaction.status}: ${transaction.id}`
-        } else if (errorDetail) {
-          errorMessage = `${errorDetail.description} (${orderData.debug_id})`
-        } else {
-          errorMessage = JSON.stringify(orderData)
-        }
-        throw new Error(errorMessage)
-      } else {
-        console.log("Capture result", orderData, JSON.stringify(orderData, null, 2))
-        onPaymentComplete?.()
-        return `Transaction ${transaction.status}: ${transaction.id}`
-      }
-    } catch (error) {
-      return `Sorry, your transaction could not be processed...${error}`
-    }
-  }
-
-  function onError(error: any) {
-    console.error("PayPal error:", error)
-    setMessage("Payment failed. Please try again.")
-  }
-
   return (
     <div>
       <div className="mb-6 flex justify-center">
@@ -160,35 +116,58 @@ export function PayPalPayment({
             <CardDescription>One-time payment of ${paymentAmount.toFixed(2)} CAD</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* PayPal Buttons for modal payment */}
-            <div>
-              <h3 className="font-semibold mb-3">Pay with PayPal</h3>
-              <PayPalButtons
-                createOrder={createOrder}
-                onApprove={async (data) => setMessage(await onApprove(data))}
-                onError={onError}
-                style={{
-                  shape: "rect",
-                  layout: "vertical",
-                  color: "gold",
-                  label: "paypal",
-                }}
-              />
-            </div>
+            <PayPalHostedFieldsProvider createOrder={createOrder}>
+              <div className="space-y-4">
+                <h3 className="font-semibold mb-3">Pay with Card</h3>
 
-            <div className="text-center text-sm text-gray-500">OR PAY WITH CARD</div>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="card-number">Card Number</Label>
+                    <div className="border rounded-md p-3 bg-white">
+                      <PayPalHostedField
+                        id="card-number"
+                        hostedFieldType="number"
+                        options={{
+                          selector: "#card-number",
+                          placeholder: "1234 5678 9012 3456",
+                        }}
+                      />
+                    </div>
+                  </div>
 
-            {/* PayPal Card Fields for inline payment */}
-            <div>
-              <h3 className="font-semibold mb-3">Pay with Card</h3>
-              <PayPalCardFieldsProvider
-                createOrder={createOrder}
-                onApprove={async (data) => setMessage(await onApprove(data))}
-              >
-                <PayPalCardFieldsForm />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="expiration-date">Expiry Date</Label>
+                      <div className="border rounded-md p-3 bg-white">
+                        <PayPalHostedField
+                          id="expiration-date"
+                          hostedFieldType="expirationDate"
+                          options={{
+                            selector: "#expiration-date",
+                            placeholder: "MM/YY",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="cvv">CVV</Label>
+                      <div className="border rounded-md p-3 bg-white">
+                        <PayPalHostedField
+                          id="cvv"
+                          hostedFieldType="cvv"
+                          options={{
+                            selector: "#cvv",
+                            placeholder: "123",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Billing Address Fields */}
-                <div className="mt-4 space-y-4">
+                <div className="mt-6 space-y-4">
                   <h4 className="font-medium">Billing Address</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -230,10 +209,13 @@ export function PayPalPayment({
                   </div>
                 </div>
 
-                {/* Custom Submit Button */}
-                <SubmitPayment billingAddress={billingAddress} />
-              </PayPalCardFieldsProvider>
-            </div>
+                <SubmitPayment
+                  billingAddress={billingAddress}
+                  onPaymentComplete={onPaymentComplete}
+                  setMessage={setMessage}
+                />
+              </div>
+            </PayPalHostedFieldsProvider>
 
             {message && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
@@ -254,31 +236,57 @@ export function PayPalPayment({
   )
 }
 
-const SubmitPayment = ({ billingAddress }: { billingAddress: any }) => {
+const SubmitPayment = ({
+  billingAddress,
+  onPaymentComplete,
+  setMessage,
+}: {
+  billingAddress: any
+  onPaymentComplete?: () => void
+  setMessage: (msg: string) => void
+}) => {
   const [isPaying, setIsPaying] = useState(false)
-  const { cardFieldsForm } = usePayPalCardFields()
+  const hostedFields = usePayPalHostedFields()
 
   const handleClick = async () => {
-    if (!cardFieldsForm) {
-      const childErrorMessage = "Unable to find any child components in the <PayPalCardFieldsProvider />"
-      throw new Error(childErrorMessage)
-    }
-
-    const formState = await cardFieldsForm.getState()
-
-    if (!formState.isFormValid) {
-      return alert("The payment form is invalid")
+    if (!hostedFields?.cardFields) {
+      setMessage("PayPal hosted fields not ready. Please try again.")
+      return
     }
 
     setIsPaying(true)
 
-    cardFieldsForm.submit({ billingAddress }).finally(() => {
+    try {
+      const { orderId } = await hostedFields.cardFields.submit({
+        contingencies: ["3D_SECURE"],
+        billingAddress,
+      })
+
+      // Capture the order
+      const response = await fetch("/api/paypal/capture-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderID: orderId }),
+      })
+
+      const data = await response.json()
+
+      if (data.status === "COMPLETED") {
+        setMessage("✅ Payment successful!")
+        onPaymentComplete?.()
+      } else {
+        setMessage("❌ Payment failed. Please try again.")
+      }
+    } catch (error) {
+      console.error("Payment error:", error)
+      setMessage("❌ Payment failed. Please try again.")
+    } finally {
       setIsPaying(false)
-    })
+    }
   }
 
   return (
-    <Button onClick={handleClick} disabled={isPaying} className="w-full mt-4" size="lg">
+    <Button onClick={handleClick} disabled={isPaying} className="w-full mt-6" size="lg">
       {isPaying ? (
         <>
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
