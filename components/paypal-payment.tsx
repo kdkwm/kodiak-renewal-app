@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -37,10 +37,38 @@ export function PayPalPayment({
     postalCode: "",
   })
   const [message, setMessage] = useState("")
+  const [clientToken, setClientToken] = useState<string | null>(null)
+  const [isLoadingToken, setIsLoadingToken] = useState(true)
 
   const CLIENT_ID =
     process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
     "AV0TyYPKe1QH6uYUKMdNoDhjvVPO_zyg1PyM9o4iJMe5JJW6vaRHbk6NYo_6iYn5dwEhr5zsGbkNG1qzc"
+
+  useEffect(() => {
+    async function fetchClientToken() {
+      try {
+        const response = await fetch("/api/paypal/client-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        })
+
+        const data = await response.json()
+
+        if (data.clientToken) {
+          setClientToken(data.clientToken)
+        } else {
+          setMessage("Failed to initialize PayPal. Please try again.")
+        }
+      } catch (error) {
+        console.error("Error fetching PayPal client token:", error)
+        setMessage("Failed to initialize PayPal. Please try again.")
+      } finally {
+        setIsLoadingToken(false)
+      }
+    }
+
+    fetchClientToken()
+  }, [])
 
   if (!CLIENT_ID) {
     return (
@@ -54,11 +82,37 @@ export function PayPalPayment({
     )
   }
 
+  if (isLoadingToken) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p>Loading PayPal payment form...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!clientToken) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600">Failed to initialize PayPal. Please refresh and try again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   const initialOptions = {
     "client-id": CLIENT_ID,
     currency: "CAD",
     intent: "capture",
     components: "hosted-fields",
+    "data-client-token": clientToken,
   }
 
   function handleBillingAddressChange(field: string, value: string) {
@@ -116,7 +170,16 @@ export function PayPalPayment({
             <CardDescription>One-time payment of ${paymentAmount.toFixed(2)} CAD</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <PayPalHostedFieldsProvider createOrder={createOrder}>
+            <PayPalHostedFieldsProvider
+              createOrder={createOrder}
+              options={{
+                fields: {
+                  number: { selector: "#card-number" },
+                  cvv: { selector: "#cvv" },
+                  expirationDate: { selector: "#expiration-date" },
+                },
+              }}
+            >
               <div className="space-y-4">
                 <h3 className="font-semibold mb-3">Pay with Card</h3>
 
