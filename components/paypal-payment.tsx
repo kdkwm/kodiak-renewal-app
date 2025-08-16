@@ -47,15 +47,15 @@ export function PayPalPayment({
   useEffect(() => {
     async function fetchClientToken() {
       try {
-        const response = await fetch("/api/paypal/client-token", {
+        const response = await fetch("/api/paypal/generate-client-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         })
 
         const data = await response.json()
 
-        if (data.clientToken) {
-          setClientToken(data.clientToken)
+        if (data.client_token) {
+          setClientToken(data.client_token)
         } else {
           setMessage("Failed to initialize PayPal. Please try again.")
         }
