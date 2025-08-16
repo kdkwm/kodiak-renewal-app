@@ -49,20 +49,24 @@ export function PayPalPayment({
   useEffect(() => {
     async function fetchClientToken() {
       try {
+        console.log("[v0] Fetching PayPal client token...")
         const response = await fetch("/api/paypal/generate-client-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         })
 
         const data = await response.json()
+        console.log("[v0] Client token response:", { hasToken: !!data.client_token })
 
         if (data.client_token) {
           setClientToken(data.client_token)
+          console.log("[v0] Client token set successfully")
         } else {
+          console.log("[v0] No client token in response:", data)
           setMessage("Failed to initialize PayPal. Please try again.")
         }
       } catch (error) {
-        console.error("Error fetching PayPal client token:", error)
+        console.error("[v0] Error fetching PayPal client token:", error)
         setMessage("Failed to initialize PayPal. Please try again.")
       } finally {
         setIsLoadingToken(false)
@@ -116,6 +120,13 @@ export function PayPalPayment({
     components: "card-fields",
     "data-client-token": clientToken,
   }
+
+  console.log("[v0] PayPal initialOptions:", {
+    hasClientId: !!initialOptions["client-id"],
+    hasClientToken: !!initialOptions["data-client-token"],
+    currency: initialOptions.currency,
+    components: initialOptions.components,
+  })
 
   function handleBillingAddressChange(field: string, value: string) {
     setBillingAddress((prev) => ({
@@ -283,18 +294,32 @@ const SubmitPayment = ({
   const [isPaying, setIsPaying] = useState(false)
   const { cardFields } = usePayPalCardFields()
 
+  useEffect(() => {
+    console.log("[v0] PayPal CardFields state:", {
+      cardFields: !!cardFields,
+      cardFieldsType: typeof cardFields,
+      cardFieldsKeys: cardFields ? Object.keys(cardFields) : null,
+    })
+  }, [cardFields])
+
   const handleClick = async () => {
+    console.log("[v0] Payment button clicked, cardFields ready:", !!cardFields)
+
     if (!cardFields) {
+      console.log("[v0] CardFields not ready, current state:", cardFields)
       setMessage("PayPal card fields not ready. Please try again.")
       return
     }
 
     setIsPaying(true)
+    console.log("[v0] Starting payment submission with billing address:", billingAddress)
 
     try {
       const { orderId } = await cardFields.submit({
         billingAddress,
       })
+
+      console.log("[v0] PayPal submit successful, orderId:", orderId)
 
       // Capture the order
       const response = await fetch("/api/paypal/capture-order", {
@@ -304,6 +329,7 @@ const SubmitPayment = ({
       })
 
       const data = await response.json()
+      console.log("[v0] Capture response:", data)
 
       if (data.status === "COMPLETED") {
         setMessage("✅ Payment successful!")
@@ -312,7 +338,7 @@ const SubmitPayment = ({
         setMessage("❌ Payment failed. Please try again.")
       }
     } catch (error) {
-      console.error("Payment error:", error)
+      console.error("[v0] Payment error:", error)
       setMessage("❌ Payment failed. Please try again.")
     } finally {
       setIsPaying(false)
