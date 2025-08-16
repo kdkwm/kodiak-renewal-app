@@ -112,7 +112,7 @@ export function PayPalPayment({
     currency: "CAD",
     intent: "capture",
     components: "hosted-fields",
-    "data-client-token": clientToken,
+    dataClientToken: clientToken,
   }
 
   function handleBillingAddressChange(field: string, value: string) {
