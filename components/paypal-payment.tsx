@@ -75,7 +75,7 @@ export function PayPalPayment({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: paymentAmount,
+          paymentAmount: paymentAmount,
           contractData: contractData,
           renewalState: renewalState,
         }),
@@ -83,8 +83,8 @@ export function PayPalPayment({
 
       const orderData = await response.json()
 
-      if (orderData.id) {
-        return orderData.id
+      if (orderData.orderId) {
+        return orderData.orderId
       } else {
         const errorDetail = orderData?.details?.[0]
         const errorMessage = errorDetail
@@ -104,7 +104,7 @@ export function PayPalPayment({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          orderID: data.orderID,
+          orderId: data.orderID,
           contractData: contractData,
           renewalState: renewalState,
         }),
