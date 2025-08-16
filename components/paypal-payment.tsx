@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label"
 
 import {
   PayPalScriptProvider,
-  PayPalHostedFieldsProvider,
-  PayPalHostedField,
-  usePayPalHostedFields,
+  PayPalCardFieldsProvider,
+  PayPalNumberField,
+  PayPalExpiryField,
+  PayPalCVVField,
+  usePayPalCardFields,
 } from "@paypal/react-paypal-js"
 
 interface PayPalPaymentProps {
@@ -111,7 +113,7 @@ export function PayPalPayment({
     "client-id": CLIENT_ID,
     currency: "CAD",
     intent: "capture",
-    components: "hosted-fields",
+    components: "card-fields",
     dataClientToken: clientToken,
   }
 
@@ -170,16 +172,7 @@ export function PayPalPayment({
             <CardDescription>One-time payment of ${paymentAmount.toFixed(2)} CAD</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <PayPalHostedFieldsProvider
-              createOrder={createOrder}
-              options={{
-                fields: {
-                  number: { selector: "#card-number" },
-                  cvv: { selector: "#cvv" },
-                  expirationDate: { selector: "#expiration-date" },
-                },
-              }}
-            >
+            <PayPalCardFieldsProvider createOrder={createOrder}>
               <div className="space-y-4">
                 <h3 className="font-semibold mb-3">Pay with Card</h3>
 
@@ -187,14 +180,7 @@ export function PayPalPayment({
                   <div>
                     <Label htmlFor="card-number">Card Number</Label>
                     <div className="border rounded-md p-3 bg-white">
-                      <PayPalHostedField
-                        id="card-number"
-                        hostedFieldType="number"
-                        options={{
-                          selector: "#card-number",
-                          placeholder: "1234 5678 9012 3456",
-                        }}
-                      />
+                      <PayPalNumberField />
                     </div>
                   </div>
 
@@ -202,28 +188,14 @@ export function PayPalPayment({
                     <div>
                       <Label htmlFor="expiration-date">Expiry Date</Label>
                       <div className="border rounded-md p-3 bg-white">
-                        <PayPalHostedField
-                          id="expiration-date"
-                          hostedFieldType="expirationDate"
-                          options={{
-                            selector: "#expiration-date",
-                            placeholder: "MM/YY",
-                          }}
-                        />
+                        <PayPalExpiryField />
                       </div>
                     </div>
 
                     <div>
                       <Label htmlFor="cvv">CVV</Label>
                       <div className="border rounded-md p-3 bg-white">
-                        <PayPalHostedField
-                          id="cvv"
-                          hostedFieldType="cvv"
-                          options={{
-                            selector: "#cvv",
-                            placeholder: "123",
-                          }}
-                        />
+                        <PayPalCVVField />
                       </div>
                     </div>
                   </div>
@@ -278,7 +250,7 @@ export function PayPalPayment({
                   setMessage={setMessage}
                 />
               </div>
-            </PayPalHostedFieldsProvider>
+            </PayPalCardFieldsProvider>
 
             {message && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
@@ -309,19 +281,18 @@ const SubmitPayment = ({
   setMessage: (msg: string) => void
 }) => {
   const [isPaying, setIsPaying] = useState(false)
-  const hostedFields = usePayPalHostedFields()
+  const { cardFields } = usePayPalCardFields()
 
   const handleClick = async () => {
-    if (!hostedFields?.cardFields) {
-      setMessage("PayPal hosted fields not ready. Please try again.")
+    if (!cardFields) {
+      setMessage("PayPal card fields not ready. Please try again.")
       return
     }
 
     setIsPaying(true)
 
     try {
-      const { orderId } = await hostedFields.cardFields.submit({
-        contingencies: ["3D_SECURE"],
+      const { orderId } = await cardFields.submit({
         billingAddress,
       })
 
