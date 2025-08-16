@@ -39,10 +39,24 @@ export function PayPalPayment({
   })
   const [message, setMessage] = useState("")
 
-  const CLIENT_ID = "AV0TyYPKe1QH6uYUKMdNoDhjvVPO_zyg1PyM9o4iJMe5JJW6vaRHbk6NYo_6iYn5dwEhr5zsGbkNG1qzc"
+  const CLIENT_ID =
+    process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
+    "AV0TyYPKe1QH6uYUKMdNoDhjvVPO_zyg1PyM9o4iJMe5JJW6vaRHbk6NYo_6iYn5dwEhr5zsGbkNG1qzc"
+
+  if (!CLIENT_ID) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600">PayPal configuration error. Please contact support.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const initialOptions = {
-    clientId: CLIENT_ID,
+    "client-id": CLIENT_ID,
     currency: "CAD",
     intent: "capture",
     components: "buttons,card-fields",
