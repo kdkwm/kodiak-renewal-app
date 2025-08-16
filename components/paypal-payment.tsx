@@ -114,7 +114,7 @@ export function PayPalPayment({
     currency: "CAD",
     intent: "capture",
     components: "card-fields",
-    dataClientToken: clientToken,
+    "data-client-token": clientToken,
   }
 
   function handleBillingAddressChange(field: string, value: string) {
@@ -300,7 +300,7 @@ const SubmitPayment = ({
       const response = await fetch("/api/paypal/capture-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderID: orderId }),
+        body: JSON.stringify({ orderId }),
       })
 
       const data = await response.json()
