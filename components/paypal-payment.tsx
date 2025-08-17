@@ -299,15 +299,37 @@ const SubmitPayment = ({
       cardFields: !!cardFields,
       cardFieldsType: typeof cardFields,
       cardFieldsKeys: cardFields ? Object.keys(cardFields) : null,
+      cardFieldsMethods: cardFields ? Object.getOwnPropertyNames(cardFields) : null,
+      cardFieldsPrototype: cardFields ? Object.getPrototypeOf(cardFields) : null,
+      isSubmitAvailable: cardFields && typeof cardFields.submit === "function",
     })
+
+    if (cardFields) {
+      console.log("[v0] CardFields object details:", cardFields)
+      console.log("[v0] CardFields submit method:", cardFields.submit)
+    }
   }, [cardFields])
 
   const handleClick = async () => {
     console.log("[v0] Payment button clicked, cardFields ready:", !!cardFields)
 
     if (!cardFields) {
-      console.log("[v0] CardFields not ready, current state:", cardFields)
+      console.log("[v0] CardFields not ready, current state:", {
+        cardFields,
+        type: typeof cardFields,
+        isNull: cardFields === null,
+        isUndefined: cardFields === undefined,
+      })
       setMessage("PayPal card fields not ready. Please try again.")
+      return
+    }
+
+    if (typeof cardFields.submit !== "function") {
+      console.log("[v0] CardFields submit method not available:", {
+        submitType: typeof cardFields.submit,
+        availableMethods: Object.getOwnPropertyNames(cardFields),
+      })
+      setMessage("PayPal payment method not ready. Please refresh and try again.")
       return
     }
 
@@ -315,10 +337,13 @@ const SubmitPayment = ({
     console.log("[v0] Starting payment submission with billing address:", billingAddress)
 
     try {
-      const { orderId } = await cardFields.submit({
-        billingAddress,
-      })
+      const submitParams = { billingAddress }
+      console.log("[v0] Calling cardFields.submit with params:", submitParams)
 
+      const result = await cardFields.submit(submitParams)
+      console.log("[v0] PayPal submit result:", result)
+
+      const { orderId } = result
       console.log("[v0] PayPal submit successful, orderId:", orderId)
 
       // Capture the order
