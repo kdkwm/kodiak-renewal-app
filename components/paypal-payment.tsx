@@ -5,7 +5,9 @@ import { ArrowLeft } from "lucide-react"
 import {
   PayPalScriptProvider,
   PayPalCardFieldsProvider,
-  PayPalCardFields,
+  PayPalCardNumberField,
+  PayPalCardExpiryField,
+  PayPalCardCVVField,
   usePayPalCardFields,
 } from "@paypal/react-paypal-js"
 
@@ -205,7 +207,7 @@ function CardForm({
       <div>
         <Label>Card Number</Label>
         <div className="border rounded-md p-3 bg-white">
-          <PayPalCardFields.NumberField />
+          <PayPalCardNumberField />
         </div>
       </div>
 
@@ -213,13 +215,13 @@ function CardForm({
         <div>
           <Label>Expiry</Label>
           <div className="border rounded-md p-3 bg-white">
-            <PayPalCardFields.ExpiryField />
+            <PayPalCardExpiryField />
           </div>
         </div>
         <div>
           <Label>CVV</Label>
           <div className="border rounded-md p-3 bg-white">
-            <PayPalCardFields.CVVField />
+            <PayPalCardCVVField />
           </div>
         </div>
       </div>
