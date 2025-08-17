@@ -1,19 +1,19 @@
+// components/paypal-payment.tsx
 "use client"
+
 import { useState, useEffect } from "react"
 import { ArrowLeft } from "lucide-react"
+import {
+  PayPalScriptProvider,
+  PayPalCardFieldsProvider,
+  PayPalCardFields,
+  usePayPalCardFields,
+} from "@paypal/react-paypal-js"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
-import {
-  PayPalScriptProvider,
-  PayPalCardFieldsProvider,
-  PayPalNumberField,
-  PayPalExpiryField,
-  PayPalCVVField,
-  usePayPalCardFields,
-} from "@paypal/react-paypal-js"
 
 interface PayPalPaymentProps {
   contractData: any
@@ -30,50 +30,34 @@ export function PayPalPayment({
   onPaymentComplete,
   onBack,
 }: PayPalPaymentProps) {
-  const [billingAddress, setBillingAddress] = useState({
-    addressLine1: contractData.address || "",
-    addressLine2: "",
-    adminArea1: "ON", // Province
-    adminArea2: "", // City
-    countryCode: "CA",
-    postalCode: "",
-  })
-  const [message, setMessage] = useState("")
   const [clientToken, setClientToken] = useState<string | null>(null)
-  const [isLoadingToken, setIsLoadingToken] = useState(true)
+  const [loadingToken, setLoadingToken] = useState(true)
+  const [message, setMessage] = useState("")
 
   const CLIENT_ID =
     process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
-    "AV0TyYPKe1QH6uYUKMdNoDhjvVPO_zyg1PyM9o4iJMe5JJW6vaRHbk6NYo_6iYn5dwEhr5zsGbkNG1qzc"
+    "YOUR_SANDBOX_CLIENT_ID"
 
+  // Fetch client token BEFORE rendering PayPalScriptProvider
   useEffect(() => {
-    async function fetchClientToken() {
+    async function fetchToken() {
       try {
-        console.log("[v0] Fetching PayPal client token...")
-        const response = await fetch("/api/paypal/generate-client-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        })
-
-        const data = await response.json()
-        console.log("[v0] Client token response:", { hasToken: !!data.client_token })
-
+        const res = await fetch("/api/paypal/generate-client-token", { method: "POST" })
+        const data = await res.json()
         if (data.client_token) {
           setClientToken(data.client_token)
-          console.log("[v0] Client token set successfully")
         } else {
-          console.log("[v0] No client token in response:", data)
+          console.error("Failed to get client_token", data)
           setMessage("Failed to initialize PayPal. Please try again.")
         }
-      } catch (error) {
-        console.error("[v0] Error fetching PayPal client token:", error)
+      } catch (err) {
+        console.error("Error fetching client token:", err)
         setMessage("Failed to initialize PayPal. Please try again.")
       } finally {
-        setIsLoadingToken(false)
+        setLoadingToken(false)
       }
     }
-
-    fetchClientToken()
+    fetchToken()
   }, [])
 
   if (!CLIENT_ID) {
@@ -88,7 +72,7 @@ export function PayPalPayment({
     )
   }
 
-  if (isLoadingToken) {
+  if (loadingToken) {
     return (
       <div className="max-w-2xl mx-auto">
         <Card>
@@ -113,57 +97,6 @@ export function PayPalPayment({
     )
   }
 
-  const initialOptions = {
-    "client-id": CLIENT_ID,
-    currency: "CAD",
-    intent: "capture",
-    components: "card-fields",
-    "data-client-token": clientToken,
-  }
-
-  console.log("[v0] PayPal initialOptions:", {
-    hasClientId: !!initialOptions["client-id"],
-    hasClientToken: !!initialOptions["data-client-token"],
-    currency: initialOptions.currency,
-    components: initialOptions.components,
-  })
-
-  function handleBillingAddressChange(field: string, value: string) {
-    setBillingAddress((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
-
-  async function createOrder() {
-    try {
-      const response = await fetch("/api/paypal/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentAmount: paymentAmount,
-          contractData: contractData,
-          renewalState: renewalState,
-        }),
-      })
-
-      const orderData = await response.json()
-
-      if (orderData.orderId) {
-        return orderData.orderId
-      } else {
-        const errorDetail = orderData?.details?.[0]
-        const errorMessage = errorDetail
-          ? `${errorDetail.issue} ${errorDetail.description} (${orderData.debug_id})`
-          : JSON.stringify(orderData)
-        throw new Error(errorMessage)
-      }
-    } catch (error) {
-      console.error(error)
-      return `Could not initiate PayPal Checkout...${error}`
-    }
-  }
-
   return (
     <div>
       <div className="mb-6 flex justify-center">
@@ -173,94 +106,43 @@ export function PayPalPayment({
         </Button>
       </div>
 
-      <PayPalScriptProvider options={initialOptions}>
+      <PayPalScriptProvider
+        options={{
+          "client-id": CLIENT_ID,
+          components: "buttons,card-fields", // ✅ must include both
+          dataClientToken: clientToken,      // ✅ camelCase
+          currency: "CAD",
+          intent: "capture",
+        }}
+      >
         <Card className="max-w-2xl mx-auto">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl flex items-center justify-center gap-2">
               <span className="text-blue-600">💳</span>
-              PayPal Payment
+              Pay with Card
             </CardTitle>
             <CardDescription>One-time payment of ${paymentAmount.toFixed(2)} CAD</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <PayPalCardFieldsProvider createOrder={createOrder}>
-              <div className="space-y-4">
-                <h3 className="font-semibold mb-3">Pay with Card</h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="card-number">Card Number</Label>
-                    <div className="border rounded-md p-3 bg-white">
-                      <PayPalNumberField />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="expiration-date">Expiry Date</Label>
-                      <div className="border rounded-md p-3 bg-white">
-                        <PayPalExpiryField />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="cvv">CVV</Label>
-                      <div className="border rounded-md p-3 bg-white">
-                        <PayPalCVVField />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Billing Address Fields */}
-                <div className="mt-6 space-y-4">
-                  <h4 className="font-medium">Billing Address</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="address1">Address Line 1</Label>
-                      <Input
-                        id="address1"
-                        value={billingAddress.addressLine1}
-                        onChange={(e) => handleBillingAddressChange("addressLine1", e.target.value)}
-                        placeholder="Street address"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="address2">Address Line 2</Label>
-                      <Input
-                        id="address2"
-                        value={billingAddress.addressLine2}
-                        onChange={(e) => handleBillingAddressChange("addressLine2", e.target.value)}
-                        placeholder="Apt, suite, etc."
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        value={billingAddress.adminArea2}
-                        onChange={(e) => handleBillingAddressChange("adminArea2", e.target.value)}
-                        placeholder="City"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="postal">Postal Code</Label>
-                      <Input
-                        id="postal"
-                        value={billingAddress.postalCode}
-                        onChange={(e) => handleBillingAddressChange("postalCode", e.target.value)}
-                        placeholder="Postal code"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <SubmitPayment
-                  billingAddress={billingAddress}
-                  onPaymentComplete={onPaymentComplete}
-                  setMessage={setMessage}
-                />
-              </div>
+            <PayPalCardFieldsProvider
+              createOrder={async () => {
+                const res = await fetch("/api/paypal/create-order", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    paymentAmount,
+                    contractData,
+                    renewalState,
+                  }),
+                })
+                const data = await res.json()
+                return data.id
+              }}
+            >
+              <CardForm
+                onPaymentComplete={onPaymentComplete}
+                setMessage={setMessage}
+              />
             </PayPalCardFieldsProvider>
 
             {message && (
@@ -282,104 +164,82 @@ export function PayPalPayment({
   )
 }
 
-const SubmitPayment = ({
-  billingAddress,
+function CardForm({
   onPaymentComplete,
   setMessage,
 }: {
-  billingAddress: any
   onPaymentComplete?: () => void
   setMessage: (msg: string) => void
-}) => {
-  const [isPaying, setIsPaying] = useState(false)
+}) {
   const { cardFields } = usePayPalCardFields()
+  const [isPaying, setIsPaying] = useState(false)
 
-  useEffect(() => {
-    console.log("[v0] PayPal CardFields state:", {
-      cardFields: !!cardFields,
-      cardFieldsType: typeof cardFields,
-      cardFieldsKeys: cardFields ? Object.keys(cardFields) : null,
-      cardFieldsMethods: cardFields ? Object.getOwnPropertyNames(cardFields) : null,
-      cardFieldsPrototype: cardFields ? Object.getPrototypeOf(cardFields) : null,
-      isSubmitAvailable: cardFields && typeof cardFields.submit === "function",
-    })
-
-    if (cardFields) {
-      console.log("[v0] CardFields object details:", cardFields)
-      console.log("[v0] CardFields submit method:", cardFields.submit)
-    }
-  }, [cardFields])
-
-  const handleClick = async () => {
-    console.log("[v0] Payment button clicked, cardFields ready:", !!cardFields)
-
+  const handlePay = async () => {
     if (!cardFields) {
-      console.log("[v0] CardFields not ready, current state:", {
-        cardFields,
-        type: typeof cardFields,
-        isNull: cardFields === null,
-        isUndefined: cardFields === undefined,
-      })
-      setMessage("PayPal card fields not ready. Please try again.")
-      return
-    }
-
-    if (typeof cardFields.submit !== "function") {
-      console.log("[v0] CardFields submit method not available:", {
-        submitType: typeof cardFields.submit,
-        availableMethods: Object.getOwnPropertyNames(cardFields),
-      })
-      setMessage("PayPal payment method not ready. Please refresh and try again.")
+      console.warn("[CardForm] CardFields not ready")
+      setMessage("Card fields not ready, please wait a moment.")
       return
     }
 
     setIsPaying(true)
-    console.log("[v0] Starting payment submission with billing address:", billingAddress)
-
     try {
-      const submitParams = { billingAddress }
-      console.log("[v0] Calling cardFields.submit with params:", submitParams)
+      const { orderId } = await cardFields.submit()
 
-      const result = await cardFields.submit(submitParams)
-      console.log("[v0] PayPal submit result:", result)
-
-      const { orderId } = result
-      console.log("[v0] PayPal submit successful, orderId:", orderId)
-
-      // Capture the order
-      const response = await fetch("/api/paypal/capture-order", {
+      const res = await fetch("/api/paypal/capture-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({ orderID: orderId }),
       })
-
-      const data = await response.json()
-      console.log("[v0] Capture response:", data)
+      const data = await res.json()
 
       if (data.status === "COMPLETED") {
         setMessage("✅ Payment successful!")
         onPaymentComplete?.()
       } else {
-        setMessage("❌ Payment failed. Please try again.")
+        setMessage("❌ Payment failed")
       }
-    } catch (error) {
-      console.error("[v0] Payment error:", error)
-      setMessage("❌ Payment failed. Please try again.")
+    } catch (err) {
+      console.error("Payment error:", err)
+      setMessage("❌ Payment error")
     } finally {
       setIsPaying(false)
     }
   }
 
   return (
-    <Button onClick={handleClick} disabled={isPaying} className="w-full mt-6" size="lg">
-      {isPaying ? (
-        <>
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-          Processing...
-        </>
-      ) : (
-        "Pay Now"
-      )}
-    </Button>
+    <div className="space-y-4">
+      <div>
+        <Label>Card Number</Label>
+        <div className="border rounded-md p-3 bg-white">
+          <PayPalCardFields.NumberField />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Expiry</Label>
+          <div className="border rounded-md p-3 bg-white">
+            <PayPalCardFields.ExpiryField />
+          </div>
+        </div>
+        <div>
+          <Label>CVV</Label>
+          <div className="border rounded-md p-3 bg-white">
+            <PayPalCardFields.CVVField />
+          </div>
+        </div>
+      </div>
+
+      <Button onClick={handlePay} disabled={isPaying} className="w-full mt-6" size="lg">
+        {isPaying ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            Processing...
+          </>
+        ) : (
+          "Pay Now"
+        )}
+      </Button>
+    </div>
   )
 }
