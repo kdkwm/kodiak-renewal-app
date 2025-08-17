@@ -1,4 +1,3 @@
-// components/paypal-payment.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -12,7 +11,6 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 interface PayPalPaymentProps {
@@ -36,9 +34,8 @@ export function PayPalPayment({
 
   const CLIENT_ID =
     process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
-    "YOUR_SANDBOX_CLIENT_ID"
+    "AV0TyYPKe1QH6uYUKMdNoDhjvVPO_zyg1PyM9o4iJMe5JJW6vaRHbk6NYo_6iYn5dwEhr5zsGbkNG1qzc"
 
-  // Fetch client token BEFORE rendering PayPalScriptProvider
   useEffect(() => {
     async function fetchToken() {
       try {
@@ -109,8 +106,8 @@ export function PayPalPayment({
       <PayPalScriptProvider
         options={{
           "client-id": CLIENT_ID,
-          components: "buttons,card-fields", // ✅ must include both
-          dataClientToken: clientToken,      // ✅ camelCase
+          components: "buttons,card-fields", // ✅ must include both for CardFields to work
+          dataClientToken: clientToken, // ✅ camelCase format
           currency: "CAD",
           intent: "capture",
         }}
@@ -139,10 +136,7 @@ export function PayPalPayment({
                 return data.id
               }}
             >
-              <CardForm
-                onPaymentComplete={onPaymentComplete}
-                setMessage={setMessage}
-              />
+              <CardForm onPaymentComplete={onPaymentComplete} setMessage={setMessage} />
             </PayPalCardFieldsProvider>
 
             {message && (
