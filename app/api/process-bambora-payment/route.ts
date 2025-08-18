@@ -101,12 +101,15 @@ export async function POST(req: NextRequest) {
 
     // One-time payment (no installments)
     if (!isRecurring) {
+      const serviceAddress = contractData?.serviceAddress || billingData.address.trim()
       const paymentData = {
         amount: Number.parseFloat(formattedAmount),
         payment_method: "token",
         token: { code: token, name: billingData.cardholder_name.trim() },
         complete: true,
         recurring_payment: false,
+        order_number: `${serviceAddress?.replace(/\s+/g, "-") || "Payment"}-1of1`,
+        ref1: `Payment 1 of 1 for ${billingData.address.trim()}`,
         comments: `Payment 1 of 1 for ${billingData.address.trim()}`,
         billing: {
           name: billingData.cardholder_name.trim(),
@@ -190,6 +193,8 @@ export async function POST(req: NextRequest) {
         token: { code: token, name: billingData.cardholder_name.trim() },
         complete: true,
         recurring_payment: true,
+        order_number: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
+        ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
         comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
         billing: {
           name: billingData.cardholder_name.trim(),
@@ -267,6 +272,8 @@ export async function POST(req: NextRequest) {
         complete: true, // enforce purchase vs. PA
       },
       recurring_payment: true,
+      order_number: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
+      ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
       comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
       billing: {
         name: billingData.cardholder_name.trim(),
