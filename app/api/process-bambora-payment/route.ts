@@ -99,16 +99,17 @@ export async function POST(req: NextRequest) {
     const profileAuthHeader = `Passcode ${Buffer.from(`${MERCHANT_ID}:${PROFILES_API_KEY}`).toString("base64")}`
     const formattedAmount = formatAmount(amount)
 
+    const serviceAddress = contractData?.serviceAddress || billingData.address.trim()
+
     // One-time payment (no installments)
     if (!isRecurring) {
-      const serviceAddress = contractData?.serviceAddress || billingData.address.trim()
       const paymentData = {
         amount: Number.parseFloat(formattedAmount),
         payment_method: "token",
         token: { code: token, name: billingData.cardholder_name.trim(), complete: true },
         recurring_payment: false,
         order_number: `${serviceAddress?.replace(/\s+/g, "-") || "Payment"}-1of1`,
-        comments: `Payment 1 of 1 for ${billingData.address.trim()}`,
+        comments: `Payment 1 of 1 for ${serviceAddress}`,
         billing: {
           name: billingData.cardholder_name.trim(),
           address_line1: billingData.address.trim(),
@@ -149,7 +150,6 @@ export async function POST(req: NextRequest) {
     const startDate = new Date()
     const billingDay = startDate.getDate()
 
-    const serviceAddress = contractData?.serviceAddress || billingData.address.trim()
     const profileData = {
       language: "en",
       token: { name: billingData.cardholder_name.trim(), code: token },
