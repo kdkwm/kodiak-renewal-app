@@ -105,8 +105,7 @@ export async function POST(req: NextRequest) {
       const paymentData = {
         amount: Number.parseFloat(formattedAmount),
         payment_method: "token",
-        token: { code: token, name: billingData.cardholder_name.trim() },
-        complete: true,
+        token: { code: token, name: billingData.cardholder_name.trim(), complete: true },
         recurring_payment: false,
         order_number: `${serviceAddress?.replace(/\s+/g, "-") || "Payment"}-1of1`,
         comments: `Payment 1 of 1 for ${billingData.address.trim()}`,
@@ -178,8 +177,7 @@ export async function POST(req: NextRequest) {
       const tokenPurchase = {
         amount: Number.parseFloat(formattedAmount),
         payment_method: "token",
-        token: { code: token, name: billingData.cardholder_name.trim() },
-        complete: true,
+        token: { code: token, name: billingData.cardholder_name.trim(), complete: true },
         recurring_payment: true,
         order_number: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
         comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
