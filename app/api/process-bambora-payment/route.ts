@@ -263,14 +263,14 @@ export async function POST(req: NextRequest) {
         customer_code: customerCode,
         card_id: cardId,
         complete: true, // enforce purchase vs. PA
+        custom: {
+          ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+          ref2: `Profile-1of${totalInstallments}-${serviceAddress.replace(/\s+/g, "-")}`,
+          ref3: "KODIAK-PROFILE",
+        },
       },
       recurring_payment: true,
       comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
-      custom: {
-        ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
-        ref2: `Profile-1of${totalInstallments}-${serviceAddress.replace(/\s+/g, "-")}`,
-        ref3: "KODIAK-PROFILE",
-      },
       billing: {
         name: billingData.cardholder_name.trim(),
         address_line1: billingData.address.trim(),
