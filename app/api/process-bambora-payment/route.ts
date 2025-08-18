@@ -109,6 +109,11 @@ export async function POST(req: NextRequest) {
         token: { code: token, name: billingData.cardholder_name.trim(), complete: true },
         recurring_payment: false,
         comments: `Payment 1 of 1 for ${serviceAddress}`,
+        custom: {
+          ref1: `Payment 1 of 1 for ${serviceAddress}`,
+          ref2: `Single-Payment-${serviceAddress.replace(/\s+/g, "-")}`,
+          ref3: "KODIAK-SINGLE",
+        },
         billing: {
           name: billingData.cardholder_name.trim(),
           address_line1: billingData.address.trim(),
@@ -179,6 +184,11 @@ export async function POST(req: NextRequest) {
         token: { code: token, name: billingData.cardholder_name.trim(), complete: true },
         recurring_payment: true,
         comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+        custom: {
+          ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+          ref2: `Installment-1of${totalInstallments}-${serviceAddress.replace(/\s+/g, "-")}`,
+          ref3: "KODIAK-INSTALLMENT",
+        },
         billing: {
           name: billingData.cardholder_name.trim(),
           address_line1: billingData.address.trim(),
@@ -256,6 +266,11 @@ export async function POST(req: NextRequest) {
       },
       recurring_payment: true,
       comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+      custom: {
+        ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+        ref2: `Profile-1of${totalInstallments}-${serviceAddress.replace(/\s+/g, "-")}`,
+        ref3: "KODIAK-PROFILE",
+      },
       billing: {
         name: billingData.cardholder_name.trim(),
         address_line1: billingData.address.trim(),
