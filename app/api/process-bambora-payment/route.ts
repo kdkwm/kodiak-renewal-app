@@ -107,6 +107,7 @@ export async function POST(req: NextRequest) {
         token: { code: token, name: billingData.cardholder_name.trim() },
         complete: true,
         recurring_payment: false,
+        comments: `Payment 1 of 1 for ${billingData.address.trim()}`,
         billing: {
           name: billingData.cardholder_name.trim(),
           address_line1: billingData.address.trim(),
@@ -189,6 +190,7 @@ export async function POST(req: NextRequest) {
         token: { code: token, name: billingData.cardholder_name.trim() },
         complete: true,
         recurring_payment: true,
+        comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
         billing: {
           name: billingData.cardholder_name.trim(),
           address_line1: billingData.address.trim(),
@@ -265,6 +267,7 @@ export async function POST(req: NextRequest) {
         complete: true, // enforce purchase vs. PA
       },
       recurring_payment: true,
+      comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
       billing: {
         name: billingData.cardholder_name.trim(),
         address_line1: billingData.address.trim(),
