@@ -52,6 +52,7 @@ export function PaymentMethodSection({
   const paymentAmount = Math.round((total / (renewalState?.selectedPayments || 1)) * 100) / 100
 
   const [emailCopied, setEmailCopied] = useState(false)
+  const [emailSending, setEmailSending] = useState(false)
   const isKSB = contractData.company === "KSB"
 
   const scrollToTop = () => {
@@ -218,6 +219,40 @@ export function PaymentMethodSection({
     setTimeout(() => setEmailCopied(false), 2000)
   }
 
+  const handleETransferConfirmation = async () => {
+    setEmailSending(true)
+
+    try {
+      const paymentType = isInstallments ? "installment" : "complete"
+      const serviceAddress = contractData.serviceAddress || "Address not provided"
+
+      const response = await fetch("/api/send-etransfer-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          serviceAddress,
+          paymentAmount,
+          paymentType,
+        }),
+      })
+
+      if (response.ok) {
+        console.log("Email sent successfully")
+      } else {
+        console.error("Failed to send email")
+      }
+    } catch (error) {
+      console.error("Error sending email:", error)
+    } finally {
+      setEmailSending(false)
+      if (onPaymentComplete) {
+        onPaymentComplete()
+      }
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex justify-center">
@@ -348,14 +383,14 @@ export function PaymentMethodSection({
             </div>
 
             <div className="flex flex-col gap-3 pt-4">
-              <Button size="lg" onClick={onPaymentComplete} className="w-full bg-blue-600 hover:bg-blue-700 h-12">
-                I've sent the eTransfer
+              <Button
+                size="lg"
+                onClick={handleETransferConfirmation}
+                disabled={emailSending}
+                className="w-full bg-blue-600 hover:bg-blue-700 h-12"
+              >
+                {emailSending ? "Sending confirmation..." : "I've sent the eTransfer"}
               </Button>
-              {isInstallments && (
-                <Button size="lg" variant="outline" className="w-full bg-transparent h-12">
-                  Remind me about future payments
-                </Button>
-              )}
             </div>
           </div>
         </CardContent>
