@@ -179,46 +179,6 @@ export function PaymentMethodSection({
 
     const paymentDates = getPaymentDates()
 
-    const copyEmail = () => {
-      navigator.clipboard.writeText(companyEmail)
-      setEmailCopied(true)
-      setTimeout(() => setEmailCopied(false), 2000)
-    }
-
-    const handleETransferConfirmation = async () => {
-      setEmailSending(true)
-
-      try {
-        const paymentType = isInstallments ? "installment" : "complete"
-        const serviceAddress = contractData.serviceAddress || "Address not provided"
-
-        const response = await fetch("/api/send-etransfer-email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            serviceAddress,
-            paymentAmount,
-            paymentType,
-          }),
-        })
-
-        if (response.ok) {
-          console.log("Email sent successfully")
-        } else {
-          console.error("Failed to send email")
-        }
-      } catch (error) {
-        console.error("Error sending email:", error)
-      } finally {
-        setEmailSending(false)
-        if (onPaymentComplete) {
-          onPaymentComplete()
-        }
-      }
-    }
-
     return (
       <Card className="max-w-2xl mx-auto">
         <CardHeader className="text-center">
@@ -264,19 +224,9 @@ export function PaymentMethodSection({
                   <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
                     4
                   </div>
-                  <div className="text-sm">
-                    <p className="mb-2">
-                      Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>.
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-3 text-xs bg-transparent w-full sm:w-auto"
-                      onClick={copyEmail}
-                    >
-                      {emailCopied ? "Copied!" : "Copy email"}
-                    </Button>
-                  </div>
+                  <p className="text-sm">
+                    Enter the recipient email: <span className="font-mono text-blue-600">{companyEmail}</span>.
+                  </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
@@ -347,17 +297,6 @@ export function PaymentMethodSection({
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="flex flex-col gap-3 pt-4">
-              <Button
-                size="lg"
-                onClick={handleETransferConfirmation}
-                disabled={emailSending}
-                className="w-full bg-blue-600 hover:bg-blue-700 h-12"
-              >
-                {emailSending ? "Sending confirmation..." : "I've sent the eTransfer"}
-              </Button>
             </div>
           </div>
         </CardContent>

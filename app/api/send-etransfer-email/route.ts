@@ -1,41 +1,30 @@
 import { type NextRequest, NextResponse } from "next/server"
-import nodemailer from "nodemailer"
 
 export async function POST(request: NextRequest) {
   try {
     const { serviceAddress, paymentAmount, paymentType } = await request.json()
 
-    const transporter = nodemailer.createTransporter({
-      host: "mail.smtp2go.com",
-      port: 2525,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: "info@kodiaksnowremoval.ca",
-        pass: "cmJicHc3MG16YjAw",
+    const wsformResponse = await fetch("YOUR_WSFORM_WEBHOOK_URL_HERE", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        service_address: serviceAddress,
+        payment_amount: paymentAmount.toFixed(2),
+        payment_type: paymentType,
+        subject: "eTransfer Payment Confirmation",
+        message: `A customer has confirmed they've sent an eTransfer payment for ${serviceAddress}. Amount: $${paymentAmount.toFixed(2)}, Type: ${paymentType}`,
+      }),
     })
 
-    const mailOptions = {
-      from: "info@kodiaksnowremoval.ca",
-      to: "zobisatt89@gmail.com",
-      subject: "eTransfer Payment Confirmation",
-      html: `
-        <h2>eTransfer Payment Confirmation</h2>
-        <p>A customer has confirmed they've sent an eTransfer payment:</p>
-        <ul>
-          <li><strong>Service Address:</strong> ${serviceAddress}</li>
-          <li><strong>Payment Amount:</strong> $${paymentAmount.toFixed(2)}</li>
-          <li><strong>Payment Type:</strong> ${paymentType}</li>
-        </ul>
-        <p>Please check for the incoming eTransfer and process accordingly.</p>
-      `,
+    if (!wsformResponse.ok) {
+      throw new Error(`WSForm API error: ${wsformResponse.status}`)
     }
 
-    await transporter.sendMail(mailOptions)
-
-    return NextResponse.json({ success: true, message: "Email sent successfully" })
+    return NextResponse.json({ success: true, message: "Email sent successfully via WSForm" })
   } catch (error) {
-    console.error("Error sending email:", error)
+    console.error("Error sending email via WSForm:", error)
     return NextResponse.json({ success: false, error: "Failed to send email" }, { status: 500 })
   }
 }
