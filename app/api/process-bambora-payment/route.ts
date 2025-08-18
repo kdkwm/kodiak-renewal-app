@@ -109,7 +109,6 @@ export async function POST(req: NextRequest) {
         complete: true,
         recurring_payment: false,
         order_number: `${serviceAddress?.replace(/\s+/g, "-") || "Payment"}-1of1`,
-        ref1: `Payment 1 of 1 for ${billingData.address.trim()}`,
         comments: `Payment 1 of 1 for ${billingData.address.trim()}`,
         billing: {
           name: billingData.cardholder_name.trim(),
@@ -137,16 +136,6 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      // Auto-capture if sandbox still returns a PA with completion link
-      const completeLink = Array.isArray(result.links) ? result.links.find((l: any) => l.rel === "complete") : null
-      if (completeLink?.href) {
-        await fetch(completeLink.href, {
-          method: "POST",
-          headers: { Authorization: paymentAuthHeader, "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: Number.parseFloat(formattedAmount) }),
-        }).catch(() => null)
-      }
-
       return NextResponse.json({
         success: true,
         transactionId: result.id,
@@ -164,7 +153,6 @@ export async function POST(req: NextRequest) {
     const serviceAddress = contractData?.serviceAddress || billingData.address.trim()
     const profileData = {
       language: "en",
-      comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
       token: { name: billingData.cardholder_name.trim(), code: token },
       billing: {
         name: billingData.cardholder_name.trim(),
@@ -194,7 +182,6 @@ export async function POST(req: NextRequest) {
         complete: true,
         recurring_payment: true,
         order_number: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
-        ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
         comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
         billing: {
           name: billingData.cardholder_name.trim(),
@@ -273,7 +260,6 @@ export async function POST(req: NextRequest) {
       },
       recurring_payment: true,
       order_number: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
-      ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
       comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
       billing: {
         name: billingData.cardholder_name.trim(),
