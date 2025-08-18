@@ -157,9 +157,10 @@ export async function POST(req: NextRequest) {
     const startDate = new Date()
     const billingDay = startDate.getDate()
 
+    const serviceAddress = contractData?.serviceAddress || billingData.address.trim()
     const profileData = {
       language: "en",
-      comments: `Contract renewal installment plan - ${totalInstallments} payments - ${Date.now()}`,
+      comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
       token: { name: billingData.cardholder_name.trim(), code: token },
       billing: {
         name: billingData.cardholder_name.trim(),

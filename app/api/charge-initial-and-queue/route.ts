@@ -161,9 +161,10 @@ export async function POST(req: NextRequest) {
     const profileAuthHeader = `Passcode ${Buffer.from(`${MERCHANT_ID}:${PROFILES_API_KEY}`).toString("base64")}`
 
     // 1) Create Payment Profile from the single-use token (must be first; token cannot be reused)
+    const serviceAddress = contractData?.serviceAddress || billingData.address.trim()
     const profilePayload = {
       language: "en",
-      comments: `Contract renewal installment plan - ${installments} payments - ${Date.now()}`,
+      comments: `Payment 1 of ${installments} for ${serviceAddress}`,
       token: { name: billingData.cardholder_name.trim(), code: token },
       billing: {
         name: billingData.cardholder_name.trim(),
@@ -311,6 +312,7 @@ export async function POST(req: NextRequest) {
         customer_name: billingData.cardholder_name.trim(),
         customer_email: cleanEmail,
         customer_phone: cleanPhone,
+        comments: `Payment ${i + 1} of ${totalInstallments} for ${serviceAddress}`,
         metadata: { company: contractData?.company ?? null, installments: totalInstallments },
       }
 
