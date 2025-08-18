@@ -178,9 +178,14 @@ export async function POST(req: NextRequest) {
         amount: Number.parseFloat(formattedAmount),
         payment_method: "token",
         token: { code: token, name: billingData.cardholder_name.trim(), complete: true },
-        recurring_payment: true,
+        recurring_payment: false,
         order_number: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
         comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+        merchant_data: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+        custom: {
+          ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+          ref2: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
+        },
         billing: {
           name: billingData.cardholder_name.trim(),
           address_line1: billingData.address.trim(),
@@ -256,9 +261,14 @@ export async function POST(req: NextRequest) {
         card_id: cardId,
         complete: true, // enforce purchase vs. PA
       },
-      recurring_payment: true,
+      recurring_payment: false,
       order_number: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
       comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+      merchant_data: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+      custom: {
+        ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+        ref2: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
+      },
       billing: {
         name: billingData.cardholder_name.trim(),
         address_line1: billingData.address.trim(),
