@@ -108,7 +108,6 @@ export async function POST(req: NextRequest) {
         payment_method: "token",
         token: { code: token, name: billingData.cardholder_name.trim(), complete: true },
         recurring_payment: false,
-        order_number: `${serviceAddress?.replace(/\s+/g, "-") || "Payment"}-1of1`,
         comments: `Payment 1 of 1 for ${serviceAddress}`,
         billing: {
           name: billingData.cardholder_name.trim(),
@@ -179,7 +178,6 @@ export async function POST(req: NextRequest) {
         payment_method: "token",
         token: { code: token, name: billingData.cardholder_name.trim(), complete: true },
         recurring_payment: true,
-        order_number: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
         comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
         billing: {
           name: billingData.cardholder_name.trim(),
@@ -257,7 +255,6 @@ export async function POST(req: NextRequest) {
         complete: true, // enforce purchase vs. PA
       },
       recurring_payment: true,
-      order_number: `${serviceAddress.replace(/\s+/g, "-")}-1of${totalInstallments}`,
       comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
       billing: {
         name: billingData.cardholder_name.trim(),
