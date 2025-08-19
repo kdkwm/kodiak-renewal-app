@@ -7,6 +7,12 @@ export async function POST(request: NextRequest) {
   try {
     const { contractId, amount, cardLastFour, note } = await request.json()
 
+    const isProduction = process.env.NODE_ENV === "production"
+    const environment = isProduction ? "PRODUCTION" : "DEVELOPMENT"
+
+    console.log(`[v0] CRM Integration - Environment: ${environment}`)
+    console.log("[v0] CRM Request received:", { contractId, amount, cardLastFour, note: note ? "SET" : "EMPTY" })
+
     if (!contractId || !amount) {
       return NextResponse.json(
         { success: false, error: "Missing required fields: contractId, amount" },
@@ -26,12 +32,18 @@ export async function POST(request: NextRequest) {
       note: note || "",
     }
 
-    console.log("[v0] Sending to external CRM:", {
-      url: `${CRM_API_URL}/${contractId}`,
+    const requestUrl = `${CRM_API_URL}/${contractId}`
+    console.log("[v0] CRM Request Details:", {
+      environment,
+      url: requestUrl,
       payload,
+      headers: {
+        "Content-Type": "application/json",
+        "X-AUTH-TOKEN": CRM_AUTH_TOKEN ? "SET" : "MISSING",
+      },
     })
 
-    const response = await fetch(`${CRM_API_URL}/${contractId}`, {
+    const response = await fetch(requestUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -41,6 +53,13 @@ export async function POST(request: NextRequest) {
     })
 
     const responseData = await response.text()
+
+    console.log("[v0] CRM Response Details:", {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      body: responseData,
+    })
 
     if (!response.ok) {
       console.log("[v0] CRM API error:", response.status, responseData)
@@ -58,7 +77,11 @@ export async function POST(request: NextRequest) {
       data: responseData,
     })
   } catch (error) {
-    console.error("[v0] CRM API request failed:", error)
+    console.error("[v0] CRM API request failed:", {
+      error: error.message,
+      stack: error.stack,
+      name: error.name,
+    })
     return NextResponse.json(
       { success: false, error: "Failed to add payment to CRM", details: error.message },
       { status: 500 },

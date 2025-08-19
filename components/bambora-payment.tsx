@@ -222,11 +222,17 @@ export function BamboraPayment({
                 renewalState,
               }
 
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 45000) // 45 seconds instead of default
+
           const resp = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
+            signal: controller.signal,
           })
+
+          clearTimeout(timeoutId)
 
           const text = await resp.text()
           if (!resp.ok) {
@@ -252,8 +258,14 @@ export function BamboraPayment({
           setPaymentComplete(true)
           onPaymentComplete()
         } catch (err: any) {
-          const msg = err?.message || "Server error"
-          setFormError(msg)
+          if (err.name === "AbortError") {
+            setFormError(
+              "Payment is taking longer than expected. Please wait a moment and check your email for confirmation, or contact support if needed.",
+            )
+          } else {
+            const msg = err?.message || "Server error"
+            setFormError(msg)
+          }
         } finally {
           setProcessing(false)
         }
