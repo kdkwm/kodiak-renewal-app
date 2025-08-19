@@ -144,13 +144,19 @@ async function sendPaymentToCRM(contractId: string, amount: string, cardLastFour
 
     console.log("[v0] Sending payment to CRM:", crmPayload)
 
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NETLIFY_URL
-        ? process.env.NETLIFY_URL
-        : "http://localhost:3000"
+    let baseUrl = "http://localhost:3000" // fallback
+
+    if (process.env.NETLIFY_URL && process.env.NETLIFY_URL.trim()) {
+      baseUrl = process.env.NETLIFY_URL.trim()
+    } else if (process.env.VERCEL_URL && process.env.VERCEL_URL.trim()) {
+      baseUrl = `https://${process.env.VERCEL_URL.trim()}`
+    }
 
     const crmUrl = `${baseUrl}/api/crm/add-payment`
+    console.log("[v0] Environment variables:", {
+      NETLIFY_URL: process.env.NETLIFY_URL || "NOT_SET",
+      VERCEL_URL: process.env.VERCEL_URL || "NOT_SET",
+    })
     console.log("[v0] CRM URL:", crmUrl)
 
     const response = await fetch(crmUrl, {
