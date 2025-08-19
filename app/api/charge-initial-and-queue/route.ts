@@ -397,9 +397,10 @@ export async function POST(req: NextRequest) {
         future_dates: futureDates,
         contract_id: contractData?.contractId || "",
         season: contractData?.season || "2024-2025",
-        is_platinum: renewalState?.platinumService || false, // Fixed to use renewalState.platinumService
+        is_platinum: renewalState?.platinumService || false,
+        order_number: firstTransactionId, // Added order number from transaction ID
       }),
-      sendPaymentToCRM(contractData?.contractId || "", formattedAmount, initialJson?.card?.last_four, scheduleNote), // Added schedule note parameter
+      // sendPaymentToCRM(contractData?.contractId || "", formattedAmount, initialJson?.card?.last_four, scheduleNote),
     ])
 
     if (futureCount <= 0) {

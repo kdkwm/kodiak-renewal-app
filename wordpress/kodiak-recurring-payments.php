@@ -404,6 +404,8 @@ class Kodiak_Recurring_Payments_Plugin {
           update_post_meta($pid, '_kodiak_gateway_response', $body);
           $processed[] = ['id' => $pid, 'transaction_id' => $json['id'] ?? null];
           
+          $this->send_payment_to_crm($pid, $amount);
+          
           do_action('kodiak_scheduled_payment_completed', $pid, $json);
         } else {
           $err = is_array($json) && isset($json['message']) ? $json['message'] : ('HTTP ' . $code . ' ' . substr($body, 0, 200));
@@ -594,126 +596,131 @@ class Kodiak_Recurring_Payments_Plugin {
     echo '</form></div>';
   }
 
-public function kodiak_add_meta_boxes() {
-  add_meta_box(
-    'kodiak_payment_details',
-    'Kodiak Payment Details',
-    [$this, 'kodiak_mb_details'],
-    self::CPT,
-    'normal',
-    'high'
-  );
+  public function kodiak_add_meta_boxes() {
+    add_meta_box(
+      'kodiak_payment_details',
+      'Kodiak Payment Details',
+      [$this, 'kodiak_mb_details'],
+      self::CPT,
+      'normal',
+      'high'
+    );
 
-  add_meta_box(
-    'kodiak_gateway_response',
-    'Gateway Response (raw)',
-    [$this, 'kodiak_mb_gateway_raw'],
-    self::CPT,
-    'normal',
-    'default'
-  );
-}
-
-public function kodiak_mb_details($post) {
-  $meta = function(string $key, $default = '') use ($post) {
-    $v = get_post_meta($post->ID, $key, true);
-    return $v !== '' && $v !== null ? $v : $default;
-  };
-
-  $rows = [
-    ['Amount',           $meta('_kodiak_amount')],
-    ['Currency',         $meta('_kodiak_currency', 'CAD')],
-    ['Payment Date',     $meta('_kodiak_payment_date')],
-    ['Customer Code',    $meta('_kodiak_customer_code')],
-    ['Card ID',          $meta('_kodiak_card_id')],
-    ['Status',           $meta('_kodiak_status', 'pending')],
-    ['Last Error',       $meta('_kodiak_last_error')],
-    ['Transaction ID',   $meta('_kodiak_transaction_id')],
-  ];
-
-  echo '<table class="widefat striped">';
-  echo '<tbody>';
-  foreach ($rows as [$label, $value]) {
-    echo '<tr>';
-    echo '<th style="width:180px;">' . esc_html($label) . '</th>';
-    echo '<td><code>' . esc_html(is_scalar($value) ? (string)$value : wp_json_encode($value)) . '</code></td>';
-    echo '</tr>';
+    add_meta_box(
+      'kodiak_gateway_response',
+      'Gateway Response (raw)',
+      [$this, 'kodiak_mb_gateway_raw'],
+      self::CPT,
+      'normal',
+      'default'
+    );
   }
-  echo '</tbody>';
-  echo '</table>';
 
-  echo '<p style="margin-top:8px;" class="description">';
-  echo 'These fields are read-only and reflect what the processor stored. ';
-  echo 'To edit raw meta, enable “Custom fields” in the editor preferences.';
-  echo '</p>';
-}
+  public function kodiak_mb_details($post) {
+    $meta = function(string $key, $default = '') use ($post) {
+      $v = get_post_meta($post->ID, $key, true);
+      return $v !== '' && $v !== null ? $v : $default;
+    };
 
-public function kodiak_mb_gateway_raw($post) {
-  $raw = get_post_meta($post->ID, '_kodiak_gateway_response', true);
-  if (empty($raw)) {
-    echo '<p>No gateway response is stored for this entry.</p>';
-    return;
+    $rows = [
+      ['Amount',           $meta('_kodiak_amount')],
+      ['Currency',         $meta('_kodiak_currency', 'CAD')],
+      ['Payment Date',     $meta('_kodiak_payment_date')],
+      ['Customer Code',    $meta('_kodiak_customer_code')],
+      ['Card ID',          $meta('_kodiak_card_id')],
+      ['Status',           $meta('_kodiak_status', 'pending')],
+      ['Last Error',       $meta('_kodiak_last_error')],
+      ['Transaction ID',   $meta('_kodiak_transaction_id')],
+    ];
+
+    echo '<table class="widefat striped">';
+    echo '<tbody>';
+    foreach ($rows as [$label, $value]) {
+      echo '<tr>';
+      echo '<th style="width:180px;">' . esc_html($label) . '</th>';
+      echo '<td><code>' . esc_html(is_scalar($value) ? (string)$value : wp_json_encode($value)) . '</code></td>';
+      echo '</tr>';
+    }
+    echo '</tbody>';
+    echo '</table>';
+
+    echo '<p style="margin-top:8px;" class="description">';
+    echo 'These fields are read-only and reflect what the processor stored. ';
+    echo 'To edit raw meta, enable “Custom fields” in the editor preferences.';
+    echo '</p>';
   }
-  // Pretty-print JSON if possible
-  $out = $raw;
-  $decoded = json_decode($raw, true);
-  if (json_last_error() === JSON_ERROR_NONE) {
-    $out = wp_json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-  }
-  echo '<textarea readonly style="width:100%;min-height:280px;">' . esc_textarea($out) . '</textarea>';
-  echo '<p class="description">Stored raw gateway response (success or failure). Sensitive fields may be masked by the gateway.</p>';
-}
 
-public function kodiak_admin_columns($cols) {
-  // Keep the checkbox and title, then add our fields
-  $new = [];
-  foreach ($cols as $k => $v) {
-    $new[$k] = $v;
-    if ($k === 'title') {
-      $new['kodiak_payment_date'] = 'Payment Date';
-      $new['kodiak_amount'] = 'Amount';
-      $new['kodiak_customer'] = 'Customer Code';
-      $new['kodiak_card'] = 'Card ID';
-      $new['kodiak_status'] = 'Status';
-      $new['kodiak_error'] = 'Error';
+  public function kodiak_mb_gateway_raw($post) {
+    $raw = get_post_meta($post->ID, '_kodiak_gateway_response', true);
+    if (empty($raw)) {
+      echo '<p>No gateway response is stored for this entry.</p>';
+      return;
+    }
+    // Pretty-print JSON if possible
+    $out = $raw;
+    $decoded = json_decode($raw, true);
+    if (json_last_error() === JSON_ERROR_NONE) {
+      $out = wp_json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+    echo '<textarea readonly style="width:100%;min-height:280px;">' . esc_textarea($out) . '</textarea>';
+    echo '<p class="description">Stored raw gateway response (success or failure). Sensitive fields may be masked by the gateway.</p>';
+  }
+
+  public function kodiak_admin_columns($cols) {
+    // Keep the checkbox and title, then add our fields
+    $new = [];
+    foreach ($cols as $k => $v) {
+      $new[$k] = $v;
+      if ($k === 'title') {
+        $new['kodiak_payment_date'] = 'Payment Date';
+        $new['kodiak_amount'] = 'Amount';
+        $new['kodiak_customer'] = 'Customer Code';
+        $new['kodiak_card'] = 'Card ID';
+        $new['kodiak_status'] = 'Status';
+        $new['kodiak_error'] = 'Error';
+      }
+    }
+    return $new;
+  }
+
+  public function kodiak_render_admin_columns($column, $post_id) {
+    switch ($column) {
+      case 'kodiak_payment_date':
+        echo esc_html(get_post_meta($post_id, '_kodiak_payment_date', true));
+        break;
+      case 'kodiak_amount':
+        $amt = get_post_meta($post_id, '_kodiak_amount', true);
+        $ccy = get_post_meta($post_id, '_kodiak_currency', true) ?: 'CAD';
+        echo esc_html($amt !== '' ? ($amt . ' ' . $ccy) : '');
+        break;
+      case 'kodiak_customer':
+        echo '<code>' . esc_html(get_post_meta($post_id, '_kodiak_customer_code', true)) . '</code>';
+        break;
+      case 'kodiak_card':
+        echo esc_html(get_post_meta($post_id, '_kodiak_card_id', true));
+        break;
+      case 'kodiak_status':
+        echo esc_html(get_post_meta($post_id, '_kodiak_status', true));
+        break;
+      case 'kodiak_error':
+        $err = get_post_meta($post_id, '_kodiak_last_error', true);
+        if ($err) {
+          echo '<span title="' . esc_attr($err) . '">' . esc_html(mb_strimwidth($err, 0, 60, '…')) . '</span>';
+        }
+        break;
     }
   }
-  return $new;
-}
 
-public function kodiak_render_admin_columns($column, $post_id) {
-  switch ($column) {
-    case 'kodiak_payment_date':
-      echo esc_html(get_post_meta($post_id, '_kodiak_payment_date', true));
-      break;
-    case 'kodiak_amount':
-      $amt = get_post_meta($post_id, '_kodiak_amount', true);
-      $ccy = get_post_meta($post_id, '_kodiak_currency', true) ?: 'CAD';
-      echo esc_html($amt !== '' ? ($amt . ' ' . $ccy) : '');
-      break;
-    case 'kodiak_customer':
-      echo '<code>' . esc_html(get_post_meta($post_id, '_kodiak_customer_code', true)) . '</code>';
-      break;
-    case 'kodiak_card':
-      echo esc_html(get_post_meta($post_id, '_kodiak_card_id', true));
-      break;
-    case 'kodiak_status':
-      echo esc_html(get_post_meta($post_id, '_kodiak_status', true));
-      break;
-    case 'kodiak_error':
-      $err = get_post_meta($post_id, '_kodiak_last_error', true);
-      if ($err) {
-        echo '<span title="' . esc_attr($err) . '">' . esc_html(mb_strimwidth($err, 0, 60, '…')) . '</span>';
-      }
-      break;
+  public function kodiak_sortable_columns($cols) {
+    $cols['kodiak_payment_date'] = 'kodiak_payment_date';
+    $cols['kodiak_status'] = 'kodiak_status';
+    return $cols;
   }
-}
 
-public function kodiak_sortable_columns($cols) {
-  $cols['kodiak_payment_date'] = 'kodiak_payment_date';
-  $cols['kodiak_status'] = 'kodiak_status';
-  return $cols;
-}
+  private function send_payment_to_crm($payment_id, $amount) {
+    // CRM integration temporarily disabled for scheduled payments
+    error_log("CRM integration disabled for scheduled payment {$payment_id}");
+  }
 }
 
 new Kodiak_Recurring_Payments_Plugin();

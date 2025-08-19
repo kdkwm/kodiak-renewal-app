@@ -207,6 +207,7 @@ class Kodiak_Payment_Receipts_Plugin {
       '{schedule_message}' => $schedule_message,
       '{payment_amount}' => '$' . number_format(floatval($amount), 2),
       '{transaction_id}' => $transaction_id,
+      '{order_number}' => $transaction_id, // Added order number mapping using transaction ID
       '{merchant_name}' => 'Kodiak Snow Removal',
       '{merchant_website}' => 'https://kodiaksnowremoval.ca',
     ];
@@ -274,6 +275,7 @@ class Kodiak_Payment_Receipts_Plugin {
       <p>Thank you for your payment of {payment_amount} for snow removal services at {address}.</p>
       <p>Payment Date: {payment_date}</p>
       <p>Transaction ID: {transaction_id}</p>
+      <p>Order Number: {order_number}</p>
       <p>{schedule_message}</p>
       <p>Best regards,<br>{merchant_name}</p>
     </body>
