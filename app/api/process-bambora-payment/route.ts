@@ -198,6 +198,64 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const sendPaymentToCRM = async (paymentData: any) => {
+      try {
+        const contractId = contractData?.contractId
+        if (!contractId) {
+          console.log("[v0] No contract ID available - skipping CRM integration")
+          return
+        }
+
+        let scheduleNote = ""
+        if (!isRecurring) {
+          scheduleNote = "Payment 1 of 1 - Balance paid in full"
+        } else {
+          const totalInstallments = Math.max(1, Number(installments || 1))
+          if (totalInstallments === 1) {
+            scheduleNote = "Payment 1 of 1 - Balance paid in full"
+          } else {
+            // Generate future payment dates for note
+            const futureDates = []
+            const startDate = new Date()
+            for (let i = 1; i < totalInstallments; i++) {
+              const d = new Date(startDate)
+              d.setMonth(startDate.getMonth() + i)
+              futureDates.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric" }))
+            }
+            scheduleNote = `Payment 1 of ${totalInstallments}. Remaining payments scheduled for ${futureDates.join(", ")}`
+          }
+        }
+
+        const crmPayload = {
+          contractId,
+          amount: formattedAmount,
+          cardLastFour: paymentData.cardLastFour || "",
+          note: scheduleNote, // Added schedule note
+        }
+
+        console.log("[v0] Sending payment to CRM:", crmPayload)
+
+        const response = await fetch(`${req.nextUrl.origin}/api/crm/add-payment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(crmPayload),
+        })
+
+        const responseData = await response.json()
+        console.log("[v0] CRM payment response:", responseData)
+
+        if (response.ok) {
+          console.log("[v0] Payment sent to CRM successfully")
+        } else {
+          console.log("[v0] CRM payment failed:", responseData.error)
+        }
+      } catch (error) {
+        console.log("[v0] CRM payment error:", error)
+      }
+    }
+
     // One-time payment (no installments)
     if (!isRecurring) {
       const paymentData = {
@@ -237,7 +295,10 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      await sendReceiptToWordPress({ transactionId: result.id })
+      await Promise.all([
+        sendReceiptToWordPress({ transactionId: result.id }),
+        sendPaymentToCRM({ cardLastFour: result.card?.last_four }),
+      ])
 
       return NextResponse.json({
         success: true,
@@ -312,7 +373,10 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      await sendReceiptToWordPress({ transactionId: firstJson.id })
+      await Promise.all([
+        sendReceiptToWordPress({ transactionId: firstJson.id }),
+        sendPaymentToCRM({ cardLastFour: firstJson.card?.last_four }),
+      ])
 
       return NextResponse.json({
         success: true,
@@ -401,7 +465,10 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("[v0] First installment payment successful, calling receipt function")
-    await sendReceiptToWordPress({ transactionId: firstJson.id })
+    await Promise.all([
+      sendReceiptToWordPress({ transactionId: firstJson.id }),
+      sendPaymentToCRM({ cardLastFour: firstJson.card?.last_four }),
+    ])
     console.log("[v0] Receipt function completed")
 
     // 4) Compute future installment dates (do NOT hit /v1/payments again here)

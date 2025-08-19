@@ -128,6 +128,43 @@ async function sendReceiptToWordPress(receiptData: any) {
   }
 }
 
+async function sendPaymentToCRM(contractId: string, amount: string, cardLastFour?: string, note?: string) {
+  try {
+    if (!contractId) {
+      console.log("[v0] No contract ID available - skipping CRM integration")
+      return
+    }
+
+    const crmPayload = {
+      contractId,
+      amount,
+      cardLastFour: cardLastFour || "",
+      note: note || "", // Added note field to CRM payload
+    }
+
+    console.log("[v0] Sending payment to CRM:", crmPayload)
+
+    const response = await fetch("/api/crm/add-payment", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(crmPayload),
+    })
+
+    const responseData = await response.json()
+    console.log("[v0] CRM payment response:", responseData)
+
+    if (response.ok) {
+      console.log("[v0] Payment sent to CRM successfully")
+    } else {
+      console.log("[v0] CRM payment failed:", responseData.error)
+    }
+  } catch (error) {
+    console.log("[v0] CRM payment error:", error)
+  }
+}
+
 // ---------- Route ----------
 export async function POST(req: NextRequest) {
   try {
@@ -326,22 +363,29 @@ export async function POST(req: NextRequest) {
       futureDates.push(toYMDLocal(due))
     }
 
-    // Send receipt to WordPress
-    await sendReceiptToWordPress({
-      transaction_id: firstTransactionId,
-      amount: Number.parseFloat(formattedAmount),
-      payment_method: "Credit Card (Complete)",
-      payment_type: "installment",
-      customer_name: billingData.cardholder_name.trim(),
-      customer_email: cleanEmail,
-      service_address: serviceAddress,
-      current_payment: 1,
-      total_payments: totalInstallments,
-      future_dates: futureDates,
-      contract_id: contractData?.contractId || "",
-      season: contractData?.season || "2024-2025",
-      is_platinum: renewalState?.platinumService || false, // Fixed to use renewalState.platinumService
-    })
+    const scheduleNote =
+      totalInstallments === 1
+        ? "Payment 1 of 1 - Balance paid in full"
+        : `Payment 1 of ${totalInstallments}. Remaining payments scheduled for ${futureDates.join(", ")}`
+
+    await Promise.all([
+      sendReceiptToWordPress({
+        transaction_id: firstTransactionId,
+        amount: Number.parseFloat(formattedAmount),
+        payment_method: "Credit Card (Complete)",
+        payment_type: "installment",
+        customer_name: billingData.cardholder_name.trim(),
+        customer_email: cleanEmail,
+        service_address: serviceAddress,
+        current_payment: 1,
+        total_payments: totalInstallments,
+        future_dates: futureDates,
+        contract_id: contractData?.contractId || "",
+        season: contractData?.season || "2024-2025",
+        is_platinum: renewalState?.platinumService || false, // Fixed to use renewalState.platinumService
+      }),
+      sendPaymentToCRM(contractData?.contractId || "", formattedAmount, initialJson?.card?.last_four, scheduleNote), // Added schedule note parameter
+    ])
 
     if (futureCount <= 0) {
       return NextResponse.json({
