@@ -105,6 +105,8 @@ export async function POST(req: NextRequest) {
       const wpSiteUrl = process.env.WORDPRESS_SITE_URL
       const receiptSecret = process.env.KODIAK_RECEIPT_SECRET
 
+      console.log("[v0] Receipt function called with:", { wpSiteUrl, receiptSecret: receiptSecret ? "SET" : "MISSING" })
+
       if (!wpSiteUrl || !receiptSecret) {
         console.log("[v0] WordPress receipt not configured - skipping receipt")
         return
@@ -129,7 +131,9 @@ export async function POST(req: NextRequest) {
 
         const receiptUrl = `${wpSiteUrl.replace(/\/+$/, "")}/wp-json/kodiak-receipts/v1/create-receipt`
 
-        await fetch(receiptUrl, {
+        console.log("[v0] Sending receipt to WordPress:", { receiptUrl, receiptPayload })
+
+        const response = await fetch(receiptUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -138,7 +142,18 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify(receiptPayload),
         })
 
-        console.log("[v0] Receipt sent to WordPress successfully")
+        const responseText = await response.text()
+        console.log("[v0] WordPress receipt response:", {
+          status: response.status,
+          statusText: response.statusText,
+          responseText,
+        })
+
+        if (response.ok) {
+          console.log("[v0] Receipt sent to WordPress successfully")
+        } else {
+          console.error("[v0] WordPress receipt failed:", response.status, responseText)
+        }
       } catch (error) {
         console.error("[v0] Failed to send receipt to WordPress:", error)
       }
