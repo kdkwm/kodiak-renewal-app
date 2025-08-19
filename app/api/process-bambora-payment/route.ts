@@ -101,6 +101,49 @@ export async function POST(req: NextRequest) {
 
     const serviceAddress = contractData?.serviceAddress || billingData.address.trim()
 
+    const sendReceiptToWordPress = async (paymentData: any) => {
+      const wpSiteUrl = process.env.WORDPRESS_SITE_URL
+      const receiptSecret = process.env.KODIAK_RECEIPT_SECRET
+
+      if (!wpSiteUrl || !receiptSecret) {
+        console.log("[v0] WordPress receipt not configured - skipping receipt")
+        return
+      }
+
+      try {
+        const receiptPayload = {
+          customer_name: billingData.cardholder_name.trim(),
+          customer_email: normalizeEmail(billingData.email),
+          service_address: serviceAddress,
+          payment_amount: formattedAmount,
+          payment_method: isRecurring ? "installment" : "complete",
+          transaction_id: paymentData.transactionId,
+          installment_info: isRecurring
+            ? {
+                current_payment: 1,
+                total_payments: totalInstallments || 1,
+              }
+            : null,
+          is_platinum: contractData?.isPlatinum || false,
+        }
+
+        const receiptUrl = `${wpSiteUrl.replace(/\/+$/, "")}/wp-json/kodiak-receipts/v1/create-receipt`
+
+        await fetch(receiptUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Kodiak-Secret": receiptSecret,
+          },
+          body: JSON.stringify(receiptPayload),
+        })
+
+        console.log("[v0] Receipt sent to WordPress successfully")
+      } catch (error) {
+        console.error("[v0] Failed to send receipt to WordPress:", error)
+      }
+    }
+
     // One-time payment (no installments)
     if (!isRecurring) {
       const paymentData = {
@@ -139,6 +182,8 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         )
       }
+
+      await sendReceiptToWordPress({ transactionId: result.id })
 
       return NextResponse.json({
         success: true,
@@ -212,6 +257,9 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         )
       }
+
+      await sendReceiptToWordPress({ transactionId: firstJson.id })
+
       return NextResponse.json({
         success: true,
         firstTransactionId: firstJson.id,
@@ -295,6 +343,8 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       )
     }
+
+    await sendReceiptToWordPress({ transactionId: firstJson.id })
 
     // 4) Compute future installment dates (do NOT hit /v1/payments again here)
     const remaining = Math.max(0, Number(totalInstallments) - 1)
