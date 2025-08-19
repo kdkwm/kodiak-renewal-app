@@ -199,10 +199,14 @@ export async function POST(req: NextRequest) {
     }
 
     const sendPaymentToCRM = async (paymentData: any) => {
+      console.log("=== CRM INTEGRATION START ===")
+      console.log("Environment:", process.env.NODE_ENV)
+      console.log("Request origin:", req.nextUrl.origin)
+
       try {
         const contractId = contractData?.contractId
         if (!contractId) {
-          console.log("[v0] No contract ID available - skipping CRM integration")
+          console.log("=== CRM INTEGRATION SKIPPED: No contract ID ===")
           return
         }
 
@@ -230,12 +234,15 @@ export async function POST(req: NextRequest) {
           contractId,
           amount: formattedAmount,
           cardLastFour: paymentData.cardLastFour || "",
-          note: scheduleNote, // Added schedule note
+          note: scheduleNote,
         }
 
-        console.log("[v0] Sending payment to CRM:", crmPayload)
+        console.log("=== CRM PAYLOAD ===", JSON.stringify(crmPayload, null, 2))
 
-        const response = await fetch(`${req.nextUrl.origin}/api/crm/add-payment`, {
+        const crmUrl = `${req.nextUrl.origin}/api/crm/add-payment`
+        console.log("=== CRM URL ===", crmUrl)
+
+        const response = await fetch(crmUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -243,17 +250,25 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify(crmPayload),
         })
 
+        console.log("=== CRM RESPONSE STATUS ===", response.status, response.statusText)
+
         const responseData = await response.json()
-        console.log("[v0] CRM payment response:", responseData)
+        console.log("=== CRM RESPONSE DATA ===", JSON.stringify(responseData, null, 2))
 
         if (response.ok) {
-          console.log("[v0] Payment sent to CRM successfully")
+          console.log("=== CRM INTEGRATION SUCCESS ===")
         } else {
-          console.log("[v0] CRM payment failed:", responseData.error)
+          console.log("=== CRM INTEGRATION FAILED ===", responseData.error)
         }
       } catch (error) {
-        console.log("[v0] CRM payment error:", error)
+        console.log("=== CRM INTEGRATION ERROR ===", error)
+        console.log("Error details:", {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        })
       }
+
+      console.log("=== CRM INTEGRATION END ===")
     }
 
     // One-time payment (no installments)

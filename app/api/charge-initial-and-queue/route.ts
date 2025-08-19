@@ -144,7 +144,16 @@ async function sendPaymentToCRM(contractId: string, amount: string, cardLastFour
 
     console.log("[v0] Sending payment to CRM:", crmPayload)
 
-    const response = await fetch("/api/crm/add-payment", {
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NETLIFY_URL
+        ? process.env.NETLIFY_URL
+        : "http://localhost:3000"
+
+    const crmUrl = `${baseUrl}/api/crm/add-payment`
+    console.log("[v0] CRM URL:", crmUrl)
+
+    const response = await fetch(crmUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
