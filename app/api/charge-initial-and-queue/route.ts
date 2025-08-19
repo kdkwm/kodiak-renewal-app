@@ -82,6 +82,52 @@ function toPositiveInt(v: unknown, fallback: number | null = null): number | nul
   return Number.isFinite(n) && n > 0 ? n : fallback
 }
 
+async function sendReceiptToWordPress(receiptData: any) {
+  const wpSiteUrl = process.env.WORDPRESS_SITE_URL
+  const receiptSecret = process.env.KODIAK_RECEIPT_SECRET
+
+  console.log("[v0] Receipt function called with:", {
+    wpSiteUrl: wpSiteUrl || "MISSING",
+    receiptSecret: receiptSecret ? "SET" : "MISSING",
+  })
+
+  if (!wpSiteUrl || !receiptSecret) {
+    console.log("[v0] WordPress receipt skipped: Missing environment variables")
+    return
+  }
+
+  try {
+    const receiptUrl = `${wpSiteUrl}/wp-json/kodiak/v1/create-receipt`
+    const receiptPayload = receiptData
+
+    console.log("[v0] Sending receipt to WordPress:", { receiptUrl, receiptPayload })
+
+    const response = await fetch(receiptUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-kodiak-secret": receiptSecret,
+      },
+      body: JSON.stringify(receiptPayload),
+    })
+
+    const responseText = await response.text()
+    console.log("[v0] WordPress receipt response:", {
+      status: response.status,
+      statusText: response.statusText,
+      responseText,
+    })
+
+    if (response.ok) {
+      console.log("[v0] Receipt sent to WordPress successfully")
+    } else {
+      console.log("[v0] WordPress receipt failed:", response.status, responseText)
+    }
+  } catch (error) {
+    console.log("[v0] WordPress receipt error:", error)
+  }
+}
+
 // ---------- Route ----------
 export async function POST(req: NextRequest) {
   try {
@@ -91,6 +137,7 @@ export async function POST(req: NextRequest) {
       installments = 1,
       billingData,
       contractData,
+      renewalState, // Added renewalState parameter
       wordpressEndpoint,
     }: {
       token: string
@@ -98,6 +145,7 @@ export async function POST(req: NextRequest) {
       installments?: number
       billingData: BillingData
       contractData?: any
+      renewalState?: any // Added renewalState type
       wordpressEndpoint?: string
     } = await req.json()
 
@@ -137,16 +185,24 @@ export async function POST(req: NextRequest) {
     const cleanEmail = normalizeEmail(billingData.email)
     const formattedAmount = formatAmount(amount)
 
-    // Credentials
-    const MERCHANT_ID = process.env.BAMBORA_MERCHANT_ID
-    const PAYMENT_API_KEY = process.env.BAMBORA_PAYMENT_API_KEY
-    const PROFILES_API_KEY = process.env.BAMBORA_PROFILES_API_KEY
+    const useSandbox = process.env.BAMBORA_USE_SANDBOX === "true"
 
-    if (!MERCHANT_ID || !PAYMENT_API_KEY || !PROFILES_API_KEY) {
+    // Sandbox mode: use hardcoded test credentials
+    // Production mode: use environment variables with validation
+    const MERCHANT_ID = useSandbox ? "383613253" : process.env.BAMBORA_MERCHANT_ID
+
+    const PAYMENT_API_KEY = useSandbox ? "0c3a403f7C0547008423f18063C00275" : process.env.BAMBORA_PAYMENT_API_KEY
+
+    const PROFILES_API_KEY = useSandbox ? "204B349135E149E9AD22A6D9D30AE0EE" : process.env.BAMBORA_PROFILES_API_KEY
+
+    console.log(`[v0] Using Bambora ${useSandbox ? "SANDBOX" : "PRODUCTION"} mode`)
+
+    // Only validate environment variables in production mode
+    if (!useSandbox && (!MERCHANT_ID || !PAYMENT_API_KEY || !PROFILES_API_KEY)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing Bambora credentials in environment variables",
+          error: "Missing Bambora credentials in environment variables (production mode)",
           missing: {
             merchantId: !MERCHANT_ID,
             paymentApiKey: !PAYMENT_API_KEY,
@@ -260,6 +316,33 @@ export async function POST(req: NextRequest) {
     const totalInstallments = Math.max(1, Number(installments || 1))
     const futureCount = totalInstallments - 1
 
+    console.log("[v0] First installment payment successful, generating receipt")
+
+    // Calculate future payment dates for receipt
+    const startDate = new Date()
+    const futureDates = []
+    for (let i = 1; i <= futureCount; i++) {
+      const due = addMonthsSafe(startDate, i)
+      futureDates.push(toYMDLocal(due))
+    }
+
+    // Send receipt to WordPress
+    await sendReceiptToWordPress({
+      transaction_id: firstTransactionId,
+      amount: Number.parseFloat(formattedAmount),
+      payment_method: "Credit Card (Complete)",
+      payment_type: "installment",
+      customer_name: billingData.cardholder_name.trim(),
+      customer_email: cleanEmail,
+      service_address: serviceAddress,
+      current_payment: 1,
+      total_payments: totalInstallments,
+      future_dates: futureDates,
+      contract_id: contractData?.contractId || "",
+      season: contractData?.season || "2024-2025",
+      is_platinum: renewalState?.platinumService || false, // Fixed to use renewalState.platinumService
+    })
+
     if (futureCount <= 0) {
       return NextResponse.json({
         success: true,
@@ -293,12 +376,17 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const startDate = new Date()
     const scheduled: any[] = []
     const failures: any[] = []
 
     for (let i = 1; i <= futureCount; i++) {
       const due = addMonthsSafe(startDate, i)
+
+      const remainingDates = []
+      for (let j = i + 1; j <= totalInstallments; j++) {
+        const futureDate = addMonthsSafe(startDate, j)
+        remainingDates.push(toYMDLocal(futureDate))
+      }
 
       const payload = {
         amount: formatAmount(amount),
@@ -313,7 +401,20 @@ export async function POST(req: NextRequest) {
         customer_email: cleanEmail,
         customer_phone: cleanPhone,
         comments: `Payment ${i + 1} of ${totalInstallments} for ${serviceAddress}`,
-        metadata: { company: contractData?.company ?? null, installments: totalInstallments },
+        metadata: {
+          company: contractData?.company ?? null,
+          installments: totalInstallments,
+          payment_number: i + 1,
+          total_payments: totalInstallments,
+          customer_email: cleanEmail,
+          contract_id: contractData?.contractId ?? null,
+          service_address: serviceAddress,
+          customer_code: customerCode,
+          card_id: cardId,
+          original_platinum: renewalState?.platinumService || false,
+          remaining_dates: remainingDates,
+          season: contractData?.season || "2024-2025",
+        },
       }
 
       try {

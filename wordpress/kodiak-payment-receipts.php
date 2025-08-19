@@ -93,6 +93,7 @@ class Kodiak_Payment_Receipts_Plugin {
     // Contract info
     $contract_id = sanitize_text_field($p['contract_id'] ?? '');
     $season = sanitize_text_field($p['season'] ?? '');
+    $is_platinum = (bool)($p['is_platinum'] ?? false);
 
     if (empty($transaction_id) || $amount <= 0 || empty($customer_email)) {
       return new WP_REST_Response(['error' => 'Missing required fields'], 400);
@@ -124,6 +125,7 @@ class Kodiak_Payment_Receipts_Plugin {
     update_post_meta($post_id, '_receipt_season', $season);
     update_post_meta($post_id, '_receipt_payment_date', current_time('Y-m-d H:i:s'));
     update_post_meta($post_id, '_receipt_status', 'pending');
+    update_post_meta($post_id, '_receipt_is_platinum', $is_platinum ? '1' : '0');
 
     // For one-time and first installments, send receipt immediately
     if ($payment_type === 'singular' || ($payment_type === 'installment' && $current_payment === 1)) {
@@ -181,6 +183,7 @@ class Kodiak_Payment_Receipts_Plugin {
     $contract_id = get_post_meta($post_id, '_receipt_contract_id', true);
     $season = get_post_meta($post_id, '_receipt_season', true);
     $payment_date = get_post_meta($post_id, '_receipt_payment_date', true);
+    $is_platinum = get_post_meta($post_id, '_receipt_is_platinum', true) === '1';
 
     // Generate schedule message
     $schedule_message = $this->generate_schedule_message($payment_type, $current_payment, $total_payments, $future_dates);
@@ -202,15 +205,17 @@ class Kodiak_Payment_Receipts_Plugin {
       '{address}' => $service_address,
       '{payment_date}' => $formatted_date,
       '{schedule_message}' => $schedule_message,
-      '%trnAmount%' => '$' . number_format(floatval($amount), 2),
-      '%trnOrderNumber%' => $transaction_id,
-      '%merchantName%' => 'Kodiak Snow Removal',
-      '%merchantOnlineAddress%' => 'https://kodiaksnowremoval.ca',
+      '{payment_amount}' => '$' . number_format(floatval($amount), 2),
+      '{transaction_id}' => $transaction_id,
+      '{merchant_name}' => 'Kodiak Snow Removal',
+      '{merchant_website}' => 'https://kodiaksnowremoval.ca',
     ];
 
     foreach ($replacements as $placeholder => $value) {
       $html_content = str_replace($placeholder, $value, $html_content);
     }
+
+    $html_content = $this->process_conditional_logic($html_content, $is_platinum);
 
     // Email settings
     $from_email = get_option(self::OPTION_FROM_EMAIL, get_option('admin_email'));
@@ -219,13 +224,14 @@ class Kodiak_Payment_Receipts_Plugin {
     $headers = [
       'Content-Type: text/html; charset=UTF-8',
       'From: ' . $from_name . ' <' . $from_email . '>',
-      'Cc: info@kodiaksnowremoval.ca'
     ];
 
     $subject = 'Payment Confirmation - Kodiak Snow Removal';
 
-    // Send email via wp_mail (will use Fluent SMTP)
+    // Send email to customer
     $sent = wp_mail($customer_email, $subject, $html_content, $headers);
+    
+    wp_mail('info@kodiaksnowremoval.ca', $subject, $html_content, $headers);
 
     if ($sent) {
       return ['success' => true];
@@ -246,7 +252,7 @@ class Kodiak_Payment_Receipts_Plugin {
         return date('F j', strtotime($date));
       }, $future_dates);
       
-      $message .= ' Your future payments are scheduled 30 days apart for ' . implode(', ', $formatted_dates) . '.';
+      $message .= ' Your remaining payments are scheduled for ' . implode(', ', $formatted_dates) . '.';
     }
 
     return $message;
@@ -265,11 +271,11 @@ class Kodiak_Payment_Receipts_Plugin {
     <body>
       <h2>Payment Confirmation</h2>
       <p>Dear {first_name} {last_name},</p>
-      <p>Thank you for your payment of %trnAmount% for snow removal services at {address}.</p>
+      <p>Thank you for your payment of {payment_amount} for snow removal services at {address}.</p>
       <p>Payment Date: {payment_date}</p>
-      <p>Transaction ID: %trnOrderNumber%</p>
+      <p>Transaction ID: {transaction_id}</p>
       <p>{schedule_message}</p>
-      <p>Best regards,<br>%merchantName%</p>
+      <p>Best regards,<br>{merchant_name}</p>
     </body>
     </html>';
   }
@@ -286,11 +292,58 @@ class Kodiak_Payment_Receipts_Plugin {
     $customer_email = get_post_meta($payment_post_id, '_kodiak_customer_email', true);
     $contract_id = get_post_meta($payment_post_id, '_kodiak_contract_id', true);
     
-    // Extract installment info from metadata if available
+    $scheduled_payment_date = get_post_meta($payment_post_id, '_kodiak_payment_date', true);
+    $payment_date = $scheduled_payment_date ?: current_time('Y-m-d H:i:s');
+    
+    $comments = get_post_meta($payment_post_id, '_kodiak_comments', true);
     $metadata = json_decode(get_post_meta($payment_post_id, '_kodiak_metadata', true), true) ?: [];
-    $current_payment = intval($metadata['current_payment'] ?? 2); // Assume 2+ for scheduled payments
-    $total_payments = intval($metadata['total_payments'] ?? 1);
-    $future_dates = $metadata['future_dates'] ?? [];
+    
+    $current_payment = intval($metadata['payment_number'] ?? 1);
+    $total_payments = intval($metadata['total_payments'] ?? $metadata['installments'] ?? 1);
+    
+    // Fallback to parsing comments if metadata doesn't have payment number
+    if ($current_payment === 1 && preg_match('/Payment (\d+) of (\d+)/', $comments, $matches)) {
+      $current_payment = intval($matches[1]);
+      $total_payments = intval($matches[2]);
+    }
+    
+    $is_platinum = false;
+    
+    // Calculate remaining payment dates
+    $future_dates = [];
+    if ($current_payment < $total_payments) {
+      // Get all scheduled payments for this customer to determine remaining dates
+      $remaining_payments = new WP_Query([
+        'post_type' => 'kodiak_payment',
+        'posts_per_page' => -1,
+        'meta_query' => [
+          [
+            'key' => '_kodiak_customer_code',
+            'value' => $customer_code,
+            'compare' => '='
+          ],
+          [
+            'key' => '_kodiak_status',
+            'value' => 'pending',
+            'compare' => '='
+          ]
+        ],
+        'meta_key' => '_kodiak_payment_date',
+        'orderby' => 'meta_value',
+        'order' => 'ASC'
+      ]);
+      
+      if ($remaining_payments->have_posts()) {
+        while ($remaining_payments->have_posts()) {
+          $remaining_payments->the_post();
+          $payment_date_remaining = get_post_meta(get_the_ID(), '_kodiak_payment_date', true);
+          if ($payment_date_remaining) {
+            $future_dates[] = $payment_date_remaining;
+          }
+        }
+        wp_reset_postdata();
+      }
+    }
 
     if (empty($customer_email)) {
       return; // Can't send receipt without email
@@ -320,8 +373,9 @@ class Kodiak_Payment_Receipts_Plugin {
     update_post_meta($post_id, '_receipt_total_payments', $total_payments);
     update_post_meta($post_id, '_receipt_future_dates', wp_json_encode($future_dates));
     update_post_meta($post_id, '_receipt_contract_id', $contract_id);
-    update_post_meta($post_id, '_receipt_payment_date', current_time('Y-m-d H:i:s'));
+    update_post_meta($post_id, '_receipt_payment_date', $payment_date);
     update_post_meta($post_id, '_receipt_status', 'pending');
+    update_post_meta($post_id, '_receipt_is_platinum', $is_platinum ? '1' : '0');
 
     // Send receipt email
     $send_result = $this->send_receipt_email($post_id);
@@ -365,6 +419,7 @@ class Kodiak_Payment_Receipts_Plugin {
       ['Status',           $meta('_receipt_status')],
       ['Sent Date',        $meta('_receipt_sent_date')],
       ['Error',            $meta('_receipt_error')],
+      ['Is Platinum',      $meta('_receipt_is_platinum') === '1' ? 'Yes' : 'No'],
     ];
 
     echo '<table class="widefat striped"><tbody>';
@@ -384,6 +439,7 @@ class Kodiak_Payment_Receipts_Plugin {
         $new['receipt_customer'] = 'Customer';
         $new['receipt_payment_date'] = 'Payment Date';
         $new['receipt_status'] = 'Status';
+        $new['receipt_is_platinum'] = 'Is Platinum';
       }
     }
     return $new;
@@ -408,12 +464,17 @@ class Kodiak_Payment_Receipts_Plugin {
         $color = $status === 'sent' ? 'green' : ($status === 'failed' ? 'red' : 'orange');
         echo '<span style="color:' . $color . ';">' . esc_html(ucfirst($status)) . '</span>';
         break;
+      case 'receipt_is_platinum':
+        $is_platinum = get_post_meta($post_id, '_receipt_is_platinum', true) === '1';
+        echo esc_html($is_platinum ? 'Yes' : 'No');
+        break;
     }
   }
 
   public function sortable_columns($cols) {
     $cols['receipt_payment_date'] = 'receipt_payment_date';
     $cols['receipt_status'] = 'receipt_status';
+    $cols['receipt_is_platinum'] = 'receipt_is_platinum';
     return $cols;
   }
 
@@ -468,6 +529,27 @@ class Kodiak_Payment_Receipts_Plugin {
   public function on_activate() {
     $this->register_cpt();
     flush_rewrite_rules();
+  }
+
+  private function process_conditional_logic($html_content, $is_platinum) {
+    error_log("[Kodiak Receipt] Processing conditional logic - is_platinum: " . ($is_platinum ? 'true' : 'false'));
+    
+    // Handle {if_platinum} conditional blocks with improved regex
+    $pattern = '/\{if_platinum\}(.*?)\{\/if_platinum\}/s';
+    
+    if ($is_platinum) {
+      // Show platinum content - remove the conditional tags
+      $html_content = preg_replace($pattern, '$1', $html_content);
+      error_log("[Kodiak Receipt] Showing platinum content");
+    } else {
+      // Hide platinum content - remove entire block
+      $html_content = preg_replace($pattern, '', $html_content);
+      error_log("[Kodiak Receipt] Hiding platinum content");
+    }
+    
+    $html_content = str_replace(['{if_platinum}', '{/if_platinum}'], '', $html_content);
+    
+    return $html_content;
   }
 }
 

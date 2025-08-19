@@ -403,6 +403,8 @@ class Kodiak_Recurring_Payments_Plugin {
           update_post_meta($pid, '_kodiak_transaction_id', $json['id'] ?? '');
           update_post_meta($pid, '_kodiak_gateway_response', $body);
           $processed[] = ['id' => $pid, 'transaction_id' => $json['id'] ?? null];
+          
+          do_action('kodiak_scheduled_payment_completed', $pid, $json);
         } else {
           $err = is_array($json) && isset($json['message']) ? $json['message'] : ('HTTP ' . $code . ' ' . substr($body, 0, 200));
           update_post_meta($pid, '_kodiak_status', 'failed');
@@ -481,6 +483,9 @@ class Kodiak_Recurring_Payments_Plugin {
     if ($code >= 200 && $code < 300 && $approved) {
       update_post_meta($pid, '_kodiak_status', 'completed');
       update_post_meta($pid, '_kodiak_transaction_id', $json['id'] ?? '');
+      
+      do_action('kodiak_scheduled_payment_completed', $pid, $json);
+      
       return ['ok' => true, 'approved' => true, 'id' => $json['id'] ?? null, 'gateway' => $json];
     }
 

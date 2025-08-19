@@ -44,16 +44,48 @@ export async function POST(req: NextRequest) {
       installments,
       billingData,
       contractData,
+      renewalState, // Added renewalState to get customer's platinum upgrade choice
       // Optional: override default behavior
       scheduleStrategy, // "wordpress" | "none"
     } = await req.json()
 
-    const MERCHANT_ID = process.env.BAMBORA_MERCHANT_ID || "383613253"
-    const PAYMENT_API_KEY = process.env.BAMBORA_PAYMENT_API_KEY || "0c3a403f7C0547008423f18063C00275"
-    const PROFILES_API_KEY = process.env.BAMBORA_PROFILES_API_KEY || "204B349135E149E9AD22A6D9D30AE0EE"
+    const useSandbox = process.env.BAMBORA_USE_SANDBOX === "true"
 
-    const isProduction = process.env.BAMBORA_MERCHANT_ID && process.env.BAMBORA_PAYMENT_API_KEY
-    const environment = isProduction ? "PRODUCTION" : "SANDBOX"
+    let MERCHANT_ID: string
+    let PAYMENT_API_KEY: string
+    let PROFILES_API_KEY: string
+
+    if (useSandbox) {
+      // Sandbox mode: always use hardcoded test credentials
+      MERCHANT_ID = "383613253"
+      PAYMENT_API_KEY = "0c3a403f7C0547008423f18063C00275"
+      PROFILES_API_KEY = "204B349135E149E9AD22A6D9D30AE0EE"
+    } else {
+      // Production mode: use environment variables with validation
+      MERCHANT_ID = process.env.BAMBORA_MERCHANT_ID || ""
+      PAYMENT_API_KEY = process.env.BAMBORA_PAYMENT_API_KEY || ""
+      PROFILES_API_KEY = process.env.BAMBORA_PROFILES_API_KEY || ""
+
+      // Validate production credentials
+      if (!MERCHANT_ID || !PAYMENT_API_KEY || !PROFILES_API_KEY) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Missing Bambora production credentials in environment variables",
+            missing: {
+              merchantId: !MERCHANT_ID,
+              paymentApiKey: !PAYMENT_API_KEY,
+              profilesApiKey: !PROFILES_API_KEY,
+            },
+          },
+          { status: 500 },
+        )
+      }
+    }
+
+    const environment = useSandbox ? "SANDBOX" : "PRODUCTION"
+
+    console.log(`[v0] Using ${environment} mode with Merchant ID: ${MERCHANT_ID}`)
 
     if (!token) return NextResponse.json({ success: false, error: "Missing payment token" }, { status: 400 })
     if (!amount || amount <= 0)
@@ -114,22 +146,29 @@ export async function POST(req: NextRequest) {
 
       try {
         const receiptPayload = {
+          transaction_id: paymentData.transactionId,
+          amount: Number.parseFloat(formattedAmount),
+          payment_method: isRecurring ? "Credit Card (Installment)" : "Credit Card (Complete)",
+          payment_type: isRecurring ? "installment" : "singular",
           customer_name: billingData.cardholder_name.trim(),
           customer_email: normalizeEmail(billingData.email),
           service_address: serviceAddress,
-          payment_amount: formattedAmount,
-          payment_method: isRecurring ? "installment" : "complete",
-          transaction_id: paymentData.transactionId,
-          installment_info: isRecurring
-            ? {
-                current_payment: 1,
-                total_payments: totalInstallments || 1,
-              }
-            : null,
-          is_platinum: contractData?.isPlatinum || false,
+          current_payment: 1,
+          total_payments: isRecurring ? installments || 1 : 1,
+          future_dates:
+            isRecurring && installments > 1
+              ? Array.from({ length: installments - 1 }, (_, i) => {
+                  const d = new Date()
+                  d.setMonth(d.getMonth() + i + 1)
+                  return yyyy_mm_dd(d)
+                })
+              : [],
+          contract_id: contractData?.contractId || "",
+          season: "2024-2025",
+          is_platinum: renewalState?.platinumService || false, // Use customer's upgrade choice from step 1, not existing contract status
         }
 
-        const receiptUrl = `${wpSiteUrl.replace(/\/+$/, "")}/wp-json/kodiak-receipts/v1/create-receipt`
+        const receiptUrl = `${wpSiteUrl.replace(/\/+$/, "")}/wp-json/kodiak/v1/create-receipt`
 
         console.log("[v0] Sending receipt to WordPress:", { receiptUrl, receiptPayload })
 
@@ -326,14 +365,14 @@ export async function POST(req: NextRequest) {
         customer_code: customerCode,
         card_id: cardId,
         complete: true, // enforce purchase vs. PA
-        custom: {
-          ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
-          ref2: `Profile-1of${totalInstallments}-${serviceAddress.replace(/\s+/g, "-")}`,
-          ref3: "KODIAK-PROFILE",
-        },
       },
       recurring_payment: true,
       comments: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+      custom: {
+        ref1: `Payment 1 of ${totalInstallments} for ${serviceAddress}`,
+        ref2: `Profile-1of${totalInstallments}-${serviceAddress.replace(/\s+/g, "-")}`,
+        ref3: "KODIAK-PROFILE",
+      },
       billing: {
         name: billingData.cardholder_name.trim(),
         address_line1: billingData.address.trim(),
@@ -346,6 +385,7 @@ export async function POST(req: NextRequest) {
       },
     }
 
+    console.log("[v0] About to process first installment payment")
     const firstResp = await fetch("https://api.na.bambora.com/v1/payments", {
       method: "POST",
       headers: { Authorization: paymentAuthHeader, "Content-Type": "application/json" },
@@ -353,13 +393,16 @@ export async function POST(req: NextRequest) {
     })
     const firstJson = await firstResp.json()
     if (!firstResp.ok || !isApprovedFlag(firstJson.approved)) {
+      console.log("[v0] First installment payment failed:", firstJson)
       return NextResponse.json(
         { success: false, error: firstJson.message || "First payment failed", details: firstJson },
         { status: 400 },
       )
     }
 
+    console.log("[v0] First installment payment successful, calling receipt function")
     await sendReceiptToWordPress({ transactionId: firstJson.id })
+    console.log("[v0] Receipt function completed")
 
     // 4) Compute future installment dates (do NOT hit /v1/payments again here)
     const remaining = Math.max(0, Number(totalInstallments) - 1)

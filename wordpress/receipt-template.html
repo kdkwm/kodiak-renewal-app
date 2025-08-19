@@ -1,36 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="x-apple-disable-message-reformatting" />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>Payment Receipt - Kodiak Snow Removal</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9fafb; line-height: 1.5; color: #374151; }
-        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .header { background: #f8fafc; color: #6b7280; padding: 40px 40px 30px; text-align: center; border-bottom: 1px solid #e5e7eb; }
-        .header h1 { margin: 0; font-size: 28px; color: #111827; font-weight: 600; line-height: 1.3; }
-        .success-badge { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 20px; display: inline-block; margin: 20px 0; font-weight: bold; }
-        .content { padding: 40px; }
-        .service-info { background: #ffffff; padding: 20px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 24px; overflow: hidden; }
-        .payment-summary { background: #ffffff; padding: 20px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 24px; overflow: hidden; }
-        .schedule-section { background: #fffbeb; padding: 20px; border: 1px solid #fed7aa; border-radius: 6px; margin-bottom: 24px; overflow: hidden; }
-        .footer { background: #f9fafb; padding: 32px 40px; text-align: center; border-top: 1px solid #e5e7eb; }
-        .support-section { margin-bottom: 24px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 20px; }
-        .platinum-upgrade { margin-bottom: 24px; background-color: #faf5ff; border: 2px solid #a855f7; border-radius: 8px; overflow: hidden; }
-        .platinum-upgrade-header { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); padding: 16px 20px; border-bottom: 1px solid #9333ea; }
-        .platinum-upgrade-header h3 { margin: 0; color: #ffffff; font-size: 18px; font-weight: 600; font-family: Arial, sans-serif; }
-        .platinum-upgrade-header span { display: inline-block; width: 20px; height: 20px; background-color: #fbbf24; border-radius: 50%; text-align: center; line-height: 20px; color: #1f2937; font-size: 12px; margin-right: 8px; vertical-align: middle; }
-        .platinum-upgrade-body { padding: 24px; }
-        .platinum-upgrade-body p { margin: 0 0 16px 0; font-family: Arial, sans-serif; font-size: 15px; color: #6b46c1; font-weight: 500; }
-        .platinum-upgrade-body div { font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; margin-bottom: 8px; }
-        .contact-info { display: inline-block; margin: 0 8px; }
-        .contact-info div { font-family: Arial, sans-serif; font-size: 12px; color: #374151; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-        .contact-info a { color: #2563eb; text-decoration: none; }
-        .company-info { border-top: 1px solid #e5e7eb; padding-top: 20px; }
-        .company-info p { margin: 0 0 4px 0; font-family: Arial, sans-serif; font-size: 13px; color: #9ca3af; }
-    </style>
     <!--[if mso]>
     <style type="text/css">
       .fallback-font {
@@ -38,167 +12,309 @@
       }
     </style>
     <![endif]-->
-</head>
-<body>
+  </head>
+  <body style="margin: 0; padding: 0; width: 100%; background-color: #f9fafb; font-family: Arial, sans-serif; line-height: 1.5; color: #374151;">
+    
     <div style="display: none; visibility: hidden; opacity: 0; font-size: 1px; line-height: 1px; max-height: 0; max-width: 0; overflow: hidden;">
-      Payment confirmation for your Kodiak Snow Removal service - Order #%trnOrderNumber%
+      Payment confirmation for your Kodiak Snow Removal service - Order #{transaction_id}
     </div>
     
-    <div class="container">
-        <div class="header">
-            <a href="https://kodiaksnowremoval.ca" style="text-decoration: none;">
-                <img src="https://kodiaksnowremoval.ca/wp-content/uploads/2025/05/ksr-logo.png" 
-                     alt="Kodiak Snow Removal" 
-                     width="180" 
-                     height="50" 
-                     style="display: block; margin: 0 auto 8px; max-width: 100%; height: auto;">
-            </a>
-            <div style="font-size: 14px; font-weight: 500; color: #6b7280; font-family: Arial, sans-serif;">
-                %merchantName%
-            </div>
-        </div>
-        
-        <div class="content">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 40px 20px; background-color: #f9fafb;">
+      <tr>
+        <td align="center">
+          
+          <!-- Main Container -->
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            
+            <!-- Header -->
+            <tr>
+              <td style="padding: 40px 40px 30px; text-align: center; background-color: #f8fafc; border-bottom: 1px solid #e5e7eb;">
+                <a href="https://kodiaksnowremoval.ca" style="text-decoration: none;">
+                  <img src="https://kodiaksnowremoval.ca/wp-content/uploads/2025/05/ksr-logo.png" 
+                       alt="Kodiak Snow Removal" 
+                       width="180" 
+                       height="50" 
+                       style="display: block; margin: 0 auto 8px; max-width: 100%; height: auto;">
+                </a>
+                <div style="font-size: 14px; font-weight: 500; color: #6b7280; font-family: Arial, sans-serif;">
+                  {merchant_name}
+                </div>
+              </td>
+            </tr>
+
+            <!-- Body Content -->
+            <tr>
+              <td style="padding: 40px;">
+                
+                <!-- Success Badge -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr>
                     <td align="center" style="padding-bottom: 32px;">
-                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="display: inline-block; background-color: #ecfdf5; border: 1px solid #d1fae5; border-radius: 20px; padding: 8px 16px;">
-                            <tr>
-                                <td style="font-family: Arial, sans-serif; font-size: 14px; font-weight: 500; color: #065f46;">
-                                    <span style="display: inline-block; width: 16px; height: 16px; background-color: #10b981; border-radius: 50%; text-align: center; line-height: 16px; color: white; font-size: 10px; margin-right: 6px; vertical-align: middle;">✓</span>
-                                    Payment Confirmed
-                                </td>
-                            </tr>
-                        </table>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="display: inline-block; background-color: #ecfdf5; border: 1px solid #d1fae5; border-radius: 20px; padding: 8px 16px;">
+                        <tr>
+                          <td style="font-family: Arial, sans-serif; font-size: 14px; font-weight: 500; color: #065f46;">
+                            <span style="display: inline-block; width: 16px; height: 16px; background-color: #10b981; border-radius: 50%; text-align: center; line-height: 16px; color: white; font-size: 10px; margin-right: 6px; vertical-align: middle;">✓</span>
+                            Payment Confirmed
+                          </td>
+                        </tr>
+                      </table>
                     </td>
-                </tr>
-            </table>
-            
-            <h1 style="margin: 0 0 20px 0; color: #111827; font-size: 24px; font-weight: 600; line-height: 1.3; font-family: Arial, sans-serif;">
-                Thank you for your payment!
-            </h1>
-            
-            <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.5; color: #6b7280; font-family: Arial, sans-serif;">
-                Your payment has been successfully processed. Here are the details of your snow removal service.
-            </p>
-
-            <!-- Platinum Upgrade Section -->
-            {if_platinum}
-            <div class="platinum-upgrade">
-                <div class="platinum-upgrade-header">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="margin: 0;">
-                            <span style="display: inline-block; width: 20px; height: 20px; background-color: #fbbf24; border-radius: 50%; text-align: center; line-height: 20px; color: #1f2937; font-size: 12px; margin-right: 8px; vertical-align: middle;">★</span>
-                            Platinum Service Upgrade
-                        </h3>
-                        <span style="background-color: #fbbf24; color: #1f2937; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-family: Arial, sans-serif;">
-                            PREMIUM
-                        </span>
-                    </div>
-                </div>
-                <div class="platinum-upgrade-body">
-                    <p>
-                        🎉 Congratulations! You've upgraded to our Platinum service level.
-                    </p>
-                    <div>
-                        Your Platinum benefits include snow clearing for ligther snowfalls (2.5cm-4.9cm)
-                    </div>
-                </div>
-            </div>
-            {/if_platinum}
-
-            <!-- Service Details Card -->
-            <div class="service-info">
-                <h3 style="margin: 0; color: #111827; font-size: 16px; font-weight: 500; font-family: Arial, sans-serif;">
-                    Service Information
-                </h3>
-                <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f3f4f6;">
-                    <div style="font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; padding-bottom: 2px;">
-                        Customer
-                    </div>
-                    <div style="font-family: Arial, sans-serif; color: #6b7280; font-size: 15px;">
-                        {first_name} {last_name}
-                    </div>
-                </div>
-                <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f3f4f6;">
-                    <div style="font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; padding-bottom: 2px;">
-                        Service Address
-                    </div>
-                    <div style="font-family: Arial, sans-serif; color: #6b7280; font-size: 15px; line-height: 1.4;">
-                        {address}
-                    </div>
-                </div>
-                <div>
-                    <div style="font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; padding-bottom: 2px;">
-                        Season
-                    </div>
-                    <div style="font-family: Arial, sans-serif; color: #6b7280; font-size: 15px;">
-                        Winter 2025
-                    </div>
-                </div>
-            </div>
-
-            <!-- Payment Notice -->
-            <div class="schedule-section">
-                <h3 style="margin: 0; color: #111827; font-size: 16px; font-weight: 500; font-family: Arial, sans-serif;">
-                    📅 Payment schedule
-                </h3>
-                <div style="font-family: Arial, sans-serif; font-style: italic; color: #92400e; line-height: 1.6; font-size: 15px;">
-                    {schedule_message} 
-                </div>
-            </div>
-
-            <!-- Payment Summary Card -->
-            <div class="payment-summary">
-                <h3 style="margin: 0; color: #111827; font-size: 16px; font-weight: 500; font-family: Arial, sans-serif;">
-                    Payment Summary
-                </h3>
-                <div style="margin-bottom: 20px;">
-                    <div style="font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; padding-bottom: 2px;">
-                        Payment date
-                    </div>
-                    <div style="font-family: Arial, sans-serif; color: #6b7280; font-size: 15px;">
-                        {payment_date}
-                    </div>
-                </div>
-                <div align="center" style="background-color: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 6px; padding: 20px;">
-                    <div style="font-size: 24px; font-weight: 600; color: #047857; margin: 0; font-family: Arial, sans-serif;">
-                        $%trnAmount%
-                    </div>
-                </div>
-            </div>
-
-            <!-- Support Section -->
-            <div class="support-section">
-                <h3 style="margin: 0 0 8px 0; color: #0369a1; font-size: 16px; font-weight: 500; font-family: Arial, sans-serif;">
-                    Need Help?
-                </h3>
-                <p style="margin: 0; font-family: Arial, sans-serif; font-size: 15px; color: #6b7280;">
-                    Questions about your service? <a href="https://kodiaksnowremoval.ca/contact-us" style="color: #2563eb; text-decoration: none;">Contact our support team</a> or reply to this email.
+                  </tr>
+                </table>
+                
+                <h1 style="margin: 0 0 20px 0; color: #111827; font-size: 24px; font-weight: 600; line-height: 1.3; font-family: Arial, sans-serif;">
+                  Thank you for your payment!
+                </h1>
+                
+                <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.5; color: #6b7280; font-family: Arial, sans-serif;">
+                  Your payment has been successfully processed. Here are the details of your snow removal service.
                 </p>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <div style="display: flex; justify-content: center;">
-                <div class="contact-info">
-                    <div>Email</div>
-                    <div>%merchantOnlineAddress%</div>
-                </div>
-                <div class="contact-info">
-                    <div>Phone</div>
-                    <div>(613) 912-7669</div>
-                </div>
-                <div class="contact-info">
-                    <div>Website</div>
-                    <div><a href="https://kodiaksnowremoval.ca">kodiaksnowremoval.ca</a></div>
-                </div>
-            </div>
-            <div class="company-info">
-                <p>&copy; 2025 Kodiak Snow Removal. All rights reserved.</p>
-                <p>172 Reis Rd. Ottawa, ON K0A 1L0</p>
-            </div>
-        </div>
-    </div>
-</body>
+
+                <!-- Added conditional logic for platinum upgrade section -->
+                {if_platinum}
+                <!-- Platinum Upgrade Section -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px; background-color: #faf5ff; border: 2px solid #a855f7; border-radius: 8px; overflow: hidden;">
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); padding: 16px 20px; border-bottom: 1px solid #9333ea;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td>
+                            <h3 style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 600; font-family: Arial, sans-serif;">
+                              <span style="display: inline-block; width: 20px; height: 20px; background-color: #fbbf24; border-radius: 50%; text-align: center; line-height: 20px; color: #1f2937; font-size: 12px; margin-right: 8px; vertical-align: middle;">★</span>
+                              Platinum Service Upgrade
+                            </h3>
+                          </td>
+                          <td align="right">
+                            <span style="background-color: #fbbf24; color: #1f2937; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-family: Arial, sans-serif;">
+                              PREMIUM
+                            </span>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 24px;">
+                      <p style="margin: 0 0 16px 0; font-family: Arial, sans-serif; font-size: 15px; color: #6b46c1; font-weight: 500;">
+                        🎉 Congratulations! You've upgraded to our Platinum service level.
+                      </p>
+                      
+                      <div>
+                        <div style="font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; margin-bottom: 8px;">
+                          Your Platinum benefits include snow clearing for ligther snowfalls (2.5cm-4.9cm)
+                        </div>
+                      </div>
+                      
+                    </td>
+                  </tr>
+                </table>
+                {/if_platinum}
+
+                <!-- Service Details Card -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+                  <tr>
+                    <td style="background-color: #f9fafb; padding: 16px 20px; border-bottom: 1px solid #e5e7eb;">
+                      <h3 style="margin: 0; color: #111827; font-size: 16px; font-weight: 500; font-family: Arial, sans-serif;">
+                        Service Information
+                      </h3>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 20px;">
+                      
+                      <!-- Customer -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f3f4f6;">
+                        <tr>
+                          <td style="font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; padding-bottom: 2px;">
+                            Customer
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="font-family: Arial, sans-serif; color: #6b7280; font-size: 15px;">
+                            {first_name} {last_name}
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- Service Address -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f3f4f6;">
+                        <tr>
+                          <td style="font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; padding-bottom: 2px;">
+                            Service Address
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="font-family: Arial, sans-serif; color: #6b7280; font-size: 15px; line-height: 1.4;">
+                            {address}
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- Season -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td style="font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; padding-bottom: 2px;">
+                            Season
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="font-family: Arial, sans-serif; color: #6b7280; font-size: 15px;">
+                            Winter 2025
+                          </td>
+                        </tr>
+                      </table>
+
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Payment Notice -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px; background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 6px; overflow: hidden;">
+                  <tr>
+                    <td style="background-color: #fef3c7; padding: 16px 20px; border-bottom: 1px solid #fed7aa;">
+                      <h3 style="margin: 0; color: #111827; font-size: 16px; font-weight: 500; font-family: Arial, sans-serif;">
+                        📅 Payment schedule
+                      </h3>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 20px;">
+                      <div style="font-family: Arial, sans-serif; font-style: italic; color: #92400e; line-height: 1.6; font-size: 15px;">
+                        {schedule_message} 
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Payment Summary Card -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+                  <tr>
+                    <td style="background-color: #f9fafb; padding: 16px 20px; border-bottom: 1px solid #e5e7eb;">
+                      <h3 style="margin: 0; color: #111827; font-size: 16px; font-weight: 500; font-family: Arial, sans-serif;">
+                        Payment Summary
+                      </h3>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 20px;">
+                      
+                      <!-- Order Number -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 20px;">
+                        <tr>
+                          <td style="font-family: Arial, sans-serif; font-weight: 500; color: #374151; font-size: 14px; padding-bottom: 2px;">
+                            Payment date
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="font-family: Arial, sans-serif; color: #6b7280; font-size: 15px;">
+                            {payment_date}
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Total Amount -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td align="center" style="background-color: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 6px; padding: 20px;">
+                            <div style="font-size: 24px; font-weight: 600; color: #047857; margin: 0; font-family: Arial, sans-serif;">
+                              ${payment_amount}
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Support Section -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 20px;">
+                  <tr>
+                    <td align="center">
+                      <h3 style="margin: 0 0 8px 0; color: #0369a1; font-size: 16px; font-weight: 500; font-family: Arial, sans-serif;">
+                        Need Help?
+                      </h3>
+                      <p style="margin: 0; font-family: Arial, sans-serif; font-size: 15px; color: #6b7280;">
+                        Questions about your service? <a href="https://kodiaksnowremoval.ca/contact-us" style="color: #2563eb; text-decoration: none;">Contact our support team</a> or reply to this email.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Signature -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+                  <tr>
+                    <td>
+                      <p style="margin: 0; color: #374151; font-family: Arial, sans-serif; font-size: 15px;">
+                        Best regards,<br>
+                        <strong style="color: #111827;">The Kodiak Team</strong>
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="background-color: #f9fafb; padding: 32px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+                
+                <!-- Contact Information -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 20px;">
+                  <tr>
+                    <td align="center">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="display: inline-block; margin: 0 8px;">
+                        <tr>
+                          <td style="padding: 4px 0; text-align: center;">
+                            <div style="font-family: Arial, sans-serif; font-size: 12px; color: #374151; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Email</div>
+                            <div style="font-family: Arial, sans-serif; font-size: 14px; color: #6b7280;">{merchant_email}</div>
+                          </td>
+                        </tr>
+                      </table>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="display: inline-block; margin: 0 8px;">
+                        <tr>
+                          <td style="padding: 4px 0; text-align: center;">
+                            <div style="font-family: Arial, sans-serif; font-size: 12px; color: #374151; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Phone</div>
+                            <div style="font-family: Arial, sans-serif; font-size: 14px; color: #6b7280;">(613) 912-7669</div>
+                          </td>
+                        </tr>
+                      </table>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="display: inline-block; margin: 0 8px;">
+                        <tr>
+                          <td style="padding: 4px 0; text-align: center;">
+                            <div style="font-family: Arial, sans-serif; font-size: 12px; color: #374151; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Website</div>
+                            <div style="font-family: Arial, sans-serif; font-size: 14px; color: #6b7280;">
+                              <a href="https://kodiaksnowremoval.ca" style="color: #2563eb; text-decoration: none;">kodiaksnowremoval.ca</a>
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Company Info -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                  <tr>
+                    <td align="center">
+                      <p style="margin: 0 0 4px 0; font-family: Arial, sans-serif; font-size: 13px; color: #9ca3af;">
+                        &copy; 2025 Kodiak Snow Removal. All rights reserved.
+                      </p>
+                      <p style="margin: 0; font-family: Arial, sans-serif; font-size: 13px; color: #9ca3af;">
+                        172 Reis Rd. Ottawa, ON K0A 1L0
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+              </td>
+            </tr>
+            
+          </table>
+          
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>
