@@ -29,9 +29,35 @@ export function ETransferModal({ contractData, renewalState, paymentAmount, onCl
     }
   }
 
-  const confirmPayment = () => {
+  const confirmPayment = async () => {
     setPaymentConfirmed(true)
-    // Here you would typically send confirmation to your backend
+
+    try {
+      const notificationResponse = await fetch("/api/send-etransfer-notification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerName: `${contractData.firstName} ${contractData.lastName}`,
+          customerEmail: contractData.email,
+          serviceAddress: contractData.serviceAddress,
+          totalInstallments: renewalState.totalInstallments || 1,
+          isPlatinum: renewalState.platinumService || false,
+          totalAmount: paymentAmount.toFixed(2),
+          contractId: contractData.contractId,
+        }),
+      })
+
+      if (!notificationResponse.ok) {
+        console.error("Failed to send office notification")
+      } else {
+        console.log("[v0] Office notification sent successfully")
+      }
+    } catch (error) {
+      console.error("Error sending office notification:", error)
+    }
+
     setTimeout(() => {
       alert("Thank you! We will process your eTransfer payment and send you a confirmation email once received.")
       onClose()

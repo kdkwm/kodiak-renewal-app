@@ -81,7 +81,42 @@ export function PaymentScheduleStep({
 
   const handlePaymentMethodSelect = (method: string) => {
     setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: method }))
+
+    if (method === "etransfer") {
+      sendETransferNotification()
+    }
+
     onNext() // Advance to payment step
+  }
+
+  const sendETransferNotification = async () => {
+    try {
+      const paymentAmount = Math.round((total / (renewalState?.selectedPayments || 1)) * 100) / 100
+
+      const response = await fetch("/api/send-etransfer-notification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerName: `${contractData.firstName} ${contractData.lastName}`,
+          customerEmail: contractData.email,
+          serviceAddress: contractData.serviceAddress,
+          totalInstallments: renewalState?.selectedPayments || 1,
+          isPlatinum: renewalState?.platinumService || false,
+          totalAmount: paymentAmount.toFixed(2),
+          contractId: contractData.contractId,
+        }),
+      })
+
+      if (!response.ok) {
+        console.error("Failed to send eTransfer office notification")
+      } else {
+        console.log("[v0] eTransfer office notification sent successfully")
+      }
+    } catch (error) {
+      console.error("Error sending eTransfer office notification:", error)
+    }
   }
 
   const generatePaymentSchedule = (numPayments: number) => {
