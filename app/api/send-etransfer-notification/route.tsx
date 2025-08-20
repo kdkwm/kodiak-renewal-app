@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         sender: "info@kodiaksnowremoval.ca",
-        to: ["zobisatt89@gmail.com"],
+        to: ["info@kodiaksnowremoval.ca"],
         subject: emailSubject,
         html_body: emailBody,
         text_body: `New eTransfer Payment Request from ${customerName}\n\nCustomer: ${customerName} (${customerEmail})\nAddress: ${serviceAddress}\nAmount: $${totalAmount}\nPayments: ${totalInstallments === 1 ? "1 (One-time)" : `${totalInstallments} installments`}\nPlatinum: ${isPlatinum ? "Yes" : "No"}\n\nPlease send eTransfer request to customer.`,
