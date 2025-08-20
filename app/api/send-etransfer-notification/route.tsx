@@ -15,18 +15,15 @@ export async function POST(request: NextRequest) {
       totalAmount,
     })
 
-    const emailSubject = `New eTransfer Payment Request - ${customerName}`
+    const emailSubject = `New eTransfer Payment Details - ${serviceAddress}`
 
     const emailBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">New eTransfer Payment Request</h2>
+        <h2 style="color: #2563eb;">New eTransfer Payment Details</h2>
         
         <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0; color: #1e40af;">Customer Information</h3>
-          <p><strong>Name:</strong> ${customerName}</p>
-          <p><strong>Email:</strong> ${customerEmail}</p>
           <p><strong>Service Address:</strong> ${serviceAddress}</p>
-          <p><strong>Contract ID:</strong> ${contractId}</p>
         </div>
 
         <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -37,9 +34,6 @@ export async function POST(request: NextRequest) {
           <p><strong>Platinum Upgrade:</strong> ${isPlatinum ? "Yes - Customer upgraded to Platinum" : "No"}</p>
         </div>
 
-        <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 0;"><strong>Action Required:</strong> Customer has selected eTransfer payment. Please send eTransfer request to ${customerEmail}</p>
-        </div>
       </div>
     `
 
