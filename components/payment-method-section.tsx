@@ -93,9 +93,9 @@ export function PaymentMethodSection({
                 <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
                   <span className="text-white text-sm font-bold">PP</span>
                 </div>
-                <div className="font-semibold text-lg text-blue-700">PayPal Payment</div>
+                <div className="font-semibold text-lg text-blue-700">Credit card</div>
               </div>
-              <div className="text-blue-700/80 text-sm">Pay securely with your PayPal account</div>
+              <div className="text-blue-700/80 text-sm">Pay securely using your credit card or PayPal account</div>
             </button>
           ) : (
             <button

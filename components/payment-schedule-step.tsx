@@ -83,10 +83,16 @@ export function PaymentScheduleStep({
     setRenewalState((prev: any) => ({ ...prev, selectedPaymentMethod: method }))
 
     if (method === "etransfer") {
-      sendETransferNotification()
+      if (!isKSB) {
+        sendETransferNotification()
+      }
     }
 
-    onNext() // Advance to payment step
+    if (method === "paypal" && isKSB) {
+      handleDirectPayPalPayment()
+    } else {
+      onNext() // Advance to payment step for other methods
+    }
   }
 
   const sendETransferNotification = async () => {
@@ -136,6 +142,63 @@ export function PaymentScheduleStep({
   }
 
   const lowestMonthlyPayment = Math.round((total / 4) * 100) / 100
+
+  const handleDirectPayPalPayment = () => {
+    const platinumUpgrade =
+      !contractData.isPlatinum && renewalState?.platinumService ? (contractData.isWalkway ? 250 : 150) : 0
+    const subtotal = contractData.contractSubtotal + platinumUpgrade
+    const tax = Math.round(subtotal * 0.13 * 100) / 100
+    const total = Math.round((subtotal + tax) * 100) / 100
+    const paymentAmount = Math.round((total / (renewalState?.selectedPayments || 1)) * 100) / 100
+    const isInstallments = (renewalState?.selectedPayments || 1) > 1
+
+    // Create PayPal form
+    const form = document.createElement("form")
+    form.action = "https://www.paypal.com/cgi-bin/webscr"
+    form.method = "post"
+    form.target = "_blank" // Open in new tab
+    form.style.display = "none"
+
+    const fields: Record<string, string> = {
+      cmd: isInstallments ? "_xclick-subscriptions" : "_xclick",
+      business: "info@kodiaksnow.ca",
+      currency_code: "CAD",
+      item_name: `Snow Removal Service 2025-2026 - ${contractData.serviceAddress}`,
+      invoice: contractData.contractId, // Very important - use contractId as invoice
+      quantity: "1",
+      return: `${window.location.origin}/payment-complete`,
+      cancel_return: `${window.location.origin}/payment-cancelled`,
+      notify_url: `${window.location.origin}/api/paypal/ipn`, // For payment notifications
+    }
+
+    if (isInstallments) {
+      // Subscription fields for installments
+      fields.a3 = paymentAmount.toFixed(2) // Recurring amount
+      fields.p3 = "1" // Period (1 month)
+      fields.t3 = "M" // Time unit (Month)
+      fields.src = "1" // Recurring payments
+      fields.srt = (renewalState?.selectedPayments || 1).toString() // Number of payments
+      fields.no_note = "1"
+      fields.no_shipping = "1"
+    } else {
+      // One-time payment fields
+      fields.amount = subtotal.toFixed(2)
+      fields.tax = tax.toFixed(2)
+    }
+
+    // Create form inputs
+    for (const [name, value] of Object.entries(fields)) {
+      const input = document.createElement("input")
+      input.type = "hidden"
+      input.name = name
+      input.value = value
+      form.appendChild(input)
+    }
+
+    document.body.appendChild(form)
+    form.submit()
+    document.body.removeChild(form)
+  }
 
   return (
     <div className="space-y-6">
@@ -279,11 +342,13 @@ export function PaymentScheduleStep({
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-6 h-6 bg-blue-600 text-white rounded text-xs font-bold flex items-center justify-center">
-                            PP
+                            💳
                           </div>
                           <div>
-                            <div className="font-semibold text-lg text-blue-700">PayPal</div>
-                            <div className="text-blue-700/80 text-sm">Pay securely with PayPal</div>
+                            <div className="font-semibold text-lg text-blue-700">Credit card</div>
+                            <div className="text-blue-700/80 text-sm">
+                              Pay securely using your credit card or PayPal account
+                            </div>
                           </div>
                         </div>
                       </button>

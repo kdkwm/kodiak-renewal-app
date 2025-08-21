@@ -1,13 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import { ArrowLeft } from "lucide-react"
-import { loadScript } from "@paypal/paypal-js"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
 
 interface PayPalPaymentProps {
   contractData: any
@@ -24,192 +20,86 @@ export function PayPalPayment({
   onPaymentComplete,
   onBack,
 }: PayPalPaymentProps) {
-  const [clientToken, setClientToken] = useState<string | null>(null)
-  const [loadingToken, setLoadingToken] = useState(true)
-  const [message, setMessage] = useState("")
-  const [isPaying, setIsPaying] = useState(false)
-  const [paypalLoaded, setPaypalLoaded] = useState(false)
-  const cardFieldsRef = useRef<any>(null)
-  const [billingAddress, setBillingAddress] = useState({
-    addressLine1: "",
-    addressLine2: "",
-    adminArea1: "",
-    adminArea2: "",
-    postalCode: "",
-    countryCode: "CA",
-  })
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [useHostedFields] = useState(false) // Set to false to use simple PayPal redirect
 
-  const CLIENT_ID =
-    process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
-    "AV0TyYPKe1QH6uYUKMdNoDhjvVPO_zyg1PyM9o4iJMe5JJW6vaRHbk6NYo_6iYn5dwEhr5zsGbkNG1qzc"
+  const handlePayPalPayment = () => {
+    setIsProcessing(true)
 
-  useEffect(() => {
-    async function fetchToken() {
-      try {
-        console.log("[v0] Fetching PayPal client token...")
-        const res = await fetch("/api/paypal/generate-client-token", { method: "POST" })
-        const data = await res.json()
-        if (data.client_token) {
-          console.log("[v0] Client token received successfully")
-          setClientToken(data.client_token)
-        } else {
-          console.error("[v0] Failed to get client_token", data)
-          setMessage("Failed to initialize PayPal. Please try again.")
-        }
-      } catch (err) {
-        console.error("[v0] Error fetching client token:", err)
-        setMessage("Failed to initialize PayPal. Please try again.")
-      } finally {
-        setLoadingToken(false)
-      }
-    }
-    fetchToken()
-  }, [])
+    // Calculate payment details
+    const platinumUpgrade =
+      !contractData.isPlatinum && renewalState?.platinumService ? (contractData.isWalkway ? 250 : 150) : 0
+    const subtotal = contractData.contractSubtotal + platinumUpgrade
+    const tax = Math.round(subtotal * 0.13 * 100) / 100
+    const isInstallments = (renewalState?.selectedPayments || 1) > 1
 
-  useEffect(() => {
-    if (!clientToken) return
+    // Create PayPal form
+    const form = document.createElement("form")
+    form.action = "https://www.paypal.com/cgi-bin/webscr"
+    form.method = "post"
+    form.target = "_blank" // Open in new tab
+    form.style.display = "none"
 
-    async function initPayPal() {
-      try {
-        console.log("[v0] Loading PayPal JS SDK...")
-        const paypal = await loadScript({
-          "client-id": CLIENT_ID,
-          components: "buttons,card-fields",
-          "data-client-token": clientToken,
-          currency: "CAD",
-          intent: "capture",
-        })
-
-        if (paypal && paypal.CardFields) {
-          console.log("[v0] PayPal CardFields available, initializing...")
-
-          const cardFields = paypal.CardFields({
-            style: {
-              input: {
-                "font-size": "16px",
-                "font-family": "system-ui, -apple-system, sans-serif",
-                color: "#333",
-              },
-              ".invalid": {
-                color: "#dc2626",
-              },
-            },
-            fields: {
-              number: { selector: "#card-number" },
-              expirationDate: { selector: "#card-expiry" },
-              cvv: { selector: "#card-cvv" },
-            },
-            createOrder: async () => {
-              console.log("[v0] Creating PayPal order...")
-              const res = await fetch("/api/paypal/create-order", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  paymentAmount,
-                  contractData,
-                  renewalState,
-                }),
-              })
-              const data = await res.json()
-              console.log("[v0] Order created:", data.id)
-              return data.id
-            },
-          })
-
-          cardFieldsRef.current = cardFields
-          await cardFields.render("#card-fields-container")
-          console.log("[v0] PayPal CardFields rendered successfully")
-          setPaypalLoaded(true)
-        } else {
-          console.error("[v0] PayPal CardFields not available")
-          setMessage("PayPal CardFields not available. Please try again.")
-        }
-      } catch (err) {
-        console.error("[v0] Error initializing PayPal:", err)
-        setMessage("Failed to load PayPal. Please refresh and try again.")
-      }
+    const fields: Record<string, string> = {
+      cmd: isInstallments ? "_xclick-subscriptions" : "_xclick",
+      business: "info@kodiaksnow.ca",
+      currency_code: "CAD",
+      item_name: `Snow Removal Service 2025-2026 - ${contractData.address}`,
+      invoice: contractData.contractId, // Very important - use contractId as invoice
+      quantity: "1",
+      return: `${window.location.origin}/payment-complete`,
+      cancel_return: `${window.location.origin}/payment-cancelled`,
+      notify_url: `${window.location.origin}/api/paypal/ipn`, // For payment notifications
     }
 
-    initPayPal()
-  }, [clientToken, CLIENT_ID, paymentAmount, contractData, renewalState])
-
-  const handlePay = async () => {
-    if (!cardFieldsRef.current) {
-      console.warn("[v0] CardFields not ready")
-      setMessage("Card fields not ready, please wait a moment.")
-      return
+    if (isInstallments) {
+      // Subscription fields for installments
+      fields.a3 = paymentAmount.toFixed(2) // Recurring amount
+      fields.p3 = "1" // Period (1 month)
+      fields.t3 = "M" // Time unit (Month)
+      fields.src = "1" // Recurring payments
+      fields.srt = (renewalState?.selectedPayments || 1).toString() // Number of payments
+      fields.no_note = "1"
+      fields.no_shipping = "1"
+    } else {
+      // One-time payment fields
+      fields.amount = subtotal.toFixed(2)
+      fields.tax = tax.toFixed(2)
     }
 
-    setIsPaying(true)
-    setMessage("")
-
-    try {
-      console.log("[v0] Submitting payment...")
-      const { orderId } = await cardFieldsRef.current.submit({
-        billingAddress,
-      })
-
-      console.log("[v0] Capturing order:", orderId)
-      const res = await fetch("/api/paypal/capture-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
-      })
-      const data = await res.json()
-
-      if (data.status === "COMPLETED") {
-        console.log("[v0] Payment completed successfully")
-        setMessage("✅ Payment successful!")
-        onPaymentComplete?.()
-      } else {
-        console.error("[v0] Payment failed:", data)
-        setMessage("❌ Payment failed. Please try again.")
-      }
-    } catch (err) {
-      console.error("[v0] Payment error:", err)
-      setMessage("❌ Payment error. Please try again.")
-    } finally {
-      setIsPaying(false)
+    // Create form inputs
+    for (const [name, value] of Object.entries(fields)) {
+      const input = document.createElement("input")
+      input.type = "hidden"
+      input.name = name
+      input.value = value
+      form.appendChild(input)
     }
+
+    document.body.appendChild(form)
+    form.submit()
+    document.body.removeChild(form)
+
+    // Reset processing state after a delay
+    setTimeout(() => {
+      setIsProcessing(false)
+    }, 2000)
+
+    // Note: We can't automatically detect payment completion with this method
+    // The user will need to manually confirm or we'll need to implement IPN handling
   }
 
-  if (!CLIENT_ID) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-red-600">PayPal configuration error. Please contact support.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const handleHostedFieldsSuccess = () => {
+    console.log("[v0] PayPal Hosted Fields payment successful")
+    onPaymentComplete?.()
   }
 
-  if (loadingToken) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p>Loading PayPal payment form...</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const handleHostedFieldsError = (error: string) => {
+    console.error("[v0] PayPal Hosted Fields error:", error)
+    alert(`Payment failed: ${error}`)
   }
 
-  if (!clientToken) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-red-600">Failed to initialize PayPal. Please refresh and try again.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
+  // Fallback to simple PayPal redirect
   return (
     <div>
       <div className="mb-6 flex justify-center">
@@ -222,107 +112,94 @@ export function PayPalPayment({
       <Card className="max-w-2xl mx-auto">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl flex items-center justify-center gap-2">
-            <span className="text-blue-600">💳</span>
+            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+              <span className="text-white text-sm font-bold">PP</span>
+            </div>
             PayPal Payment
           </CardTitle>
-          <CardDescription>One-time payment of ${paymentAmount.toFixed(2)} CAD</CardDescription>
+          <CardDescription>
+            {(renewalState?.selectedPayments || 1) > 1
+              ? `${renewalState.selectedPayments} installments of $${paymentAmount.toFixed(2)} CAD each`
+              : `One-time payment of $${paymentAmount.toFixed(2)} CAD`}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div id="card-fields-container" className="space-y-4">
-            <div>
-              <Label>Card Number</Label>
-              <div id="card-number" className="border rounded-md p-3 bg-white min-h-[48px]"></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Expiry Date</Label>
-                <div id="card-expiry" className="border rounded-md p-3 bg-white min-h-[48px]"></div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-800 mb-2">Payment Summary</h3>
+            <div className="space-y-2 text-sm text-blue-700">
+              <div className="flex justify-between">
+                <span>Service Address:</span>
+                <span className="font-medium">{contractData.address}</span>
               </div>
-              <div>
-                <Label>CVV</Label>
-                <div id="card-cvv" className="border rounded-md p-3 bg-white min-h-[48px]"></div>
+              <div className="flex justify-between">
+                <span>Contract ID:</span>
+                <span className="font-medium font-mono">{contractData.contractId}</span>
               </div>
+              <div className="flex justify-between">
+                <span>Payment Amount:</span>
+                <span className="font-medium">${paymentAmount.toFixed(2)} CAD</span>
+              </div>
+              {(renewalState?.selectedPayments || 1) > 1 && (
+                <div className="flex justify-between">
+                  <span>Payment Plan:</span>
+                  <span className="font-medium">{renewalState.selectedPayments} monthly installments</span>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-medium">Billing Address</h3>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label>Address Line 1</Label>
-                <Input
-                  value={billingAddress.addressLine1}
-                  onChange={(e) => setBillingAddress((prev) => ({ ...prev, addressLine1: e.target.value }))}
-                  placeholder="123 Main Street"
-                />
-              </div>
-              <div>
-                <Label>Address Line 2 (Optional)</Label>
-                <Input
-                  value={billingAddress.addressLine2}
-                  onChange={(e) => setBillingAddress((prev) => ({ ...prev, addressLine2: e.target.value }))}
-                  placeholder="Apt, Suite, etc."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>City</Label>
-                  <Input
-                    value={billingAddress.adminArea2}
-                    onChange={(e) => setBillingAddress((prev) => ({ ...prev, adminArea2: e.target.value }))}
-                    placeholder="Toronto"
-                  />
+            <h3 className="font-medium text-slate-700">How it works:</h3>
+            <div className="space-y-3 text-sm text-slate-600">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                  1
                 </div>
-                <div>
-                  <Label>Province</Label>
-                  <Input
-                    value={billingAddress.adminArea1}
-                    onChange={(e) => setBillingAddress((prev) => ({ ...prev, adminArea1: e.target.value }))}
-                    placeholder="ON"
-                  />
-                </div>
+                <p>Click "Pay with PayPal" to open PayPal in a new tab</p>
               </div>
-              <div>
-                <Label>Postal Code</Label>
-                <Input
-                  value={billingAddress.postalCode}
-                  onChange={(e) => setBillingAddress((prev) => ({ ...prev, postalCode: e.target.value }))}
-                  placeholder="M5V 3A8"
-                />
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                  2
+                </div>
+                <p>You can pay with your PayPal account or use a debit/credit card (no PayPal account required)</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                  3
+                </div>
+                <p>Complete your payment on PayPal's secure site</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                  4
+                </div>
+                <p>You'll be redirected back here after payment completion</p>
               </div>
             </div>
           </div>
 
-          <Button onClick={handlePay} disabled={isPaying || !paypalLoaded} className="w-full mt-6" size="lg">
-            {isPaying ? (
+          <Button
+            onClick={handlePayPalPayment}
+            disabled={isProcessing}
+            className="w-full mt-6 bg-blue-600 hover:bg-blue-700"
+            size="lg"
+          >
+            {isProcessing ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Processing...
+                Opening PayPal...
               </>
-            ) : !paypalLoaded ? (
-              "Loading PayPal..."
             ) : (
-              "Pay Now"
+              "Pay with PayPal"
             )}
           </Button>
-
-          {message && (
-            <div
-              className={`p-4 border rounded-md ${
-                message.includes("✅")
-                  ? "bg-green-50 border-green-200 text-green-800"
-                  : "bg-red-50 border-red-200 text-red-800"
-              }`}
-            >
-              <p className="text-sm">{message}</p>
-            </div>
-          )}
 
           <div className="text-center text-sm text-slate-500">
             <div className="flex items-center justify-center gap-2">
               <span>🔒</span>
               <span>Secure payments processed by PayPal</span>
             </div>
+            <div className="text-xs mt-1">No PayPal account required - you can pay with any debit or credit card</div>
           </div>
         </CardContent>
       </Card>
