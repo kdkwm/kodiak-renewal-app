@@ -44,6 +44,7 @@ export function PayPalPayment({
       cmd: isInstallments ? "_xclick-subscriptions" : "_xclick",
       business: "info@kodiaksnow.ca",
       currency_code: "CAD",
+      lc: "CA", // Locale country - Canada
       item_name: `Snow Removal Service 2025-2026 - ${contractData.address}`,
       invoice: contractData.contractId, // Very important - use contractId as invoice
       quantity: "1",

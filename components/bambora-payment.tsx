@@ -33,6 +33,8 @@ export function BamboraPayment({
   const [scriptError, setScriptError] = useState<string | null>(null)
   const [serverNote, setServerNote] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
+  const [submissionId, setSubmissionId] = useState<string | null>(null)
+  const submissionInProgress = useRef(false)
 
   const [billingData, setBillingData] = useState({
     cardholder_name: "",
@@ -183,16 +185,33 @@ export function BamboraPayment({
     e.preventDefault()
     setFormError(null)
     setServerNote(null)
+
+    if (submissionInProgress.current) {
+      console.log("[v0] Duplicate submission blocked - already in progress")
+      return
+    }
+
     if (!validateForm()) return
     if (!bamboraLoaded || !checkoutRef.current) {
       setFormError("Payment form is not ready. Please wait or refresh.")
       return
     }
+
+    const currentSubmissionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    setSubmissionId(currentSubmissionId)
+    submissionInProgress.current = true
     setProcessing(true)
+
+    console.log("[v0] Starting payment submission:", currentSubmissionId)
 
     try {
       checkoutRef.current.createToken(async (result: any) => {
         try {
+          if (submissionId && submissionId !== currentSubmissionId) {
+            console.log("[v0] Submission cancelled - newer submission started")
+            return
+          }
+
           if (result?.error) {
             const msg = result.error.message || "Card validation failed"
             setFormError(msg)
@@ -203,6 +222,8 @@ export function BamboraPayment({
             return
           }
 
+          console.log("[v0] Token created, processing payment:", currentSubmissionId)
+
           const endpoint = isRecurring ? "/api/charge-initial-and-queue" : "/api/process-bambora-payment"
           const payload = isRecurring
             ? {
@@ -212,6 +233,7 @@ export function BamboraPayment({
                 billingData,
                 contractData,
                 renewalState,
+                submissionId: currentSubmissionId,
               }
             : {
                 token: result.token,
@@ -220,10 +242,13 @@ export function BamboraPayment({
                 contractData,
                 billingData,
                 renewalState,
+                submissionId: currentSubmissionId,
               }
 
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 45000) // 45 seconds instead of default
+
+          console.log("[v0] Sending payment request:", currentSubmissionId)
 
           const resp = await fetch(endpoint, {
             method: "POST",
@@ -254,6 +279,7 @@ export function BamboraPayment({
             return
           }
 
+          console.log("[v0] Payment successful:", currentSubmissionId)
           if (json?.message) setServerNote(json.message)
           setPaymentComplete(true)
           onPaymentComplete()
@@ -267,11 +293,14 @@ export function BamboraPayment({
             setFormError(msg)
           }
         } finally {
+          submissionInProgress.current = false
           setProcessing(false)
+          console.log("[v0] Payment submission completed:", currentSubmissionId)
         }
       })
     } catch {
       setFormError("Failed to process payment. Please refresh and try again.")
+      submissionInProgress.current = false
       setProcessing(false)
     }
   }
@@ -469,7 +498,7 @@ export function BamboraPayment({
             <div className="pt-4">
               <Button
                 type="submit"
-                disabled={processing || !bamboraLoaded || !!scriptError}
+                disabled={processing || !bamboraLoaded || !!scriptError || submissionInProgress.current}
                 className="w-full bg-green-600 hover:bg-green-700 h-12"
                 size="lg"
               >
